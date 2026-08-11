@@ -154,6 +154,16 @@ Agent 技能是经过整理的指令和参考材料包，帮助 Agent 完成特�
 - [变更记录](docs/CHANGELOG.md)
 - [KooCLI 官方文档](https://support.huaweicloud.com/qs-hcli/hcli_02_003.html)
 
+## 贡献者
+
+感谢所有为本项目做出贡献的人！
+
+<a href="https://github.com/coconut1919"><img src="https://github.com/coconut1919.png" width="60" height="60" alt="coconut1919" /></a>
+<a href="https://github.com/guangkunBryant"><img src="https://github.com/guangkunBryant.png" width="60" height="60" alt="guangkunBryant" /></a>
+<a href="https://github.com/zrr000212-netizen"><img src="https://github.com/zrr000212-netizen.png" width="60" height="60" alt="zrr000212-netizen" /></a>
+<a href="https://github.com/huaweiclouddev"><img src="https://github.com/huaweiclouddev.png" width="60" height="60" alt="huaweiclouddev" /></a>
+<a href="https://github.com/BeyondTianxingjian"><img src="https://github.com/BeyondTianxingjian.png" width="60" height="60" alt="BeyondTianxingjian" /></a>
+
 ## 许可证
 
 本项目基于 Apache-2.0 许可证发布。详见 [LICENSE](LICENSE)。

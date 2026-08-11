@@ -154,6 +154,16 @@ See [`docs/safety-model.md`](docs/safety-model.md).
 - [Changelog](docs/CHANGELOG.md)
 - [KooCLI official docs](https://support.huaweicloud.com/qs-hcli/hcli_02_003.html)
 
+## Contributors
+
+Thanks to all the people who have contributed to this project!
+
+<a href="https://github.com/coconut1919"><img src="https://github.com/coconut1919.png" width="60" height="60" alt="coconut1919" /></a>
+<a href="https://github.com/guangkunBryant"><img src="https://github.com/guangkunBryant.png" width="60" height="60" alt="guangkunBryant" /></a>
+<a href="https://github.com/zrr000212-netizen"><img src="https://github.com/zrr000212-netizen.png" width="60" height="60" alt="zrr000212-netizen" /></a>
+<a href="https://github.com/huaweiclouddev"><img src="https://github.com/huaweiclouddev.png" width="60" height="60" alt="huaweiclouddev" /></a>
+<a href="https://github.com/BeyondTianxingjian"><img src="https://github.com/BeyondTianxingjian.png" width="60" height="60" alt="BeyondTianxingjian" /></a>
+
 ## License
 
 This project is licensed under the Apache-2.0 License. See [LICENSE](LICENSE).
