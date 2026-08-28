@@ -14,7 +14,7 @@ function writeEvent(key, value, extra = {}) {
 
 // ── CLI command classification ────────────────────────────────
 
-const HCLOUD_RE = /\bhcloud(?:\.exe)?\s+(.+)/i;
+const HCLOUD_RE = /(?:^|[;&|]\s*)hcloud(?:\.exe)?\s+(.+)/i;
 const READ_VERBS = /\b(List|Show|Get|Describe|NovaList|NovaShow)\w*/i;
 const WRITE_VERBS = new RegExp(
   '\\b(Create|Delete|Update|Modify|Remove|Revoke|Grant|Attach|Detach|'
