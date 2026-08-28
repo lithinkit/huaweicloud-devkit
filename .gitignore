@@ -12,3 +12,4 @@ __pycache__/
 .arts/
 *.tgz
 scripts/sync-opencode.ps1
+startopencode.bat
