@@ -11,3 +11,4 @@ __pycache__/
 .clawhub/
 .arts/
 *.tgz
+scripts/sync-opencode.ps1
