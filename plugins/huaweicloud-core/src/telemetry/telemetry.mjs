@@ -158,13 +158,7 @@ export function enqueueEvent(raw) {
 
   ingestHookEvents();
 
-  const today = getUTCToday();
-  if (today !== lastCheckedDate) {
-    lastCheckedDate = today;
-    if (shouldSendDauPing()) {
-      eventQueue.unshift(buildEvent({ key: 'dau:active_today', value: '1' }));
-    }
-  }
+  checkDauPing();
 
   const event = buildEvent(raw);
   eventQueue.push(event);
@@ -174,6 +168,16 @@ export function enqueueEvent(raw) {
   }
 
   if (eventQueue.length >= BATCH_SIZE) setImmediate(() => flushEvents());
+}
+
+function checkDauPing() {
+  const today = getUTCToday();
+  if (today !== lastCheckedDate) {
+    lastCheckedDate = today;
+    if (shouldSendDauPing()) {
+      eventQueue.unshift(buildEvent({ key: 'dau:active_today', value: '1' }));
+    }
+  }
 }
 
 function shouldSendDauPing() {
@@ -317,6 +321,7 @@ export function initTelemetry({ harness, version }) {
   if (flushTimer) clearInterval(flushTimer);
   flushTimer = setInterval(() => {
     ingestHookEvents();
+    checkDauPing();
     if (eventQueue.length > 0) setImmediate(() => flushEvents());
   }, FLUSH_INTERVAL_MS);
 }
