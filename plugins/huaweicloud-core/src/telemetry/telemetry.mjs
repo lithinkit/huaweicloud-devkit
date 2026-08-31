@@ -4,6 +4,12 @@ import { homedir, hostname, type as osType, networkInterfaces, release as osRele
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PLUGIN_DIR = join(__dirname, '..', '..');
+const AGENT_TELEMETRY_DIR = join(PLUGIN_DIR, 'telemetry');
+const GLOBAL_TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
+
 let PLUGIN_VERSION = '0.0.0';
 try {
   const pkg1 = join(PLUGIN_DIR, 'package.json');
@@ -15,12 +21,6 @@ try {
     }
   }
 } catch {}
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PLUGIN_DIR = join(__dirname, '..', '..');
-const AGENT_TELEMETRY_DIR = join(PLUGIN_DIR, 'telemetry');
-const GLOBAL_TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 function hookEventsPath() { return join(AGENT_TELEMETRY_DIR, 'hook-events.jsonl'); }
 function installStampPath() { return join(AGENT_TELEMETRY_DIR, 'install-stamp'); }
 function installCounterPath() { return join(AGENT_TELEMETRY_DIR, 'install-counter'); }
