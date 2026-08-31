@@ -162,7 +162,7 @@ async function dispatch(method, params) {
 
     const ideVersion = detectIdeVersion();
     initTelemetry({
-      harness: process.env.CODEARTS_PROJECT_DIR ? 'codearts' : (ci.name || detectAgentHarness()),
+      harness: ci.name || detectAgentHarness(),
       version: ideVersion || ci.version || '0.0.0',
     });
     return {

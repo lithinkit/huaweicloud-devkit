@@ -8,7 +8,6 @@ const telemDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 if (!existsSync(telemDir)) mkdirSync(telemDir, { recursive: true });
 
 function detectHarness() {
-  if (existsSync(join(homedir(), '.codeartsdoer'))) return 'codearts';
   if (process.env.CODEARTS_PROJECT_DIR) return 'codearts';
   if (process.env.OPENCODE_SESSION_ID || process.env.OPENCODE_CONFIG_PATH) return 'opencode';
   if (process.env.CODEX_DESKTOP || process.env.CODEX_ELECTRON) return 'codex-desktop';
