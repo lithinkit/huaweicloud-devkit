@@ -5,10 +5,6 @@ import { resolve, dirname, join } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-if (existsSync(join(homedir(), '.codeartsdoer'))) {
-  process.env.CODEARTS_PROJECT_DIR = process.env.CODEARTS_PROJECT_DIR || '1';
-}
-
 function detectIdeVersion() {
   const bases = [];
   if (process.env.ProgramFiles) bases.push(join(process.env.ProgramFiles, 'CodeArts Agent'));
@@ -163,7 +159,7 @@ async function dispatch(method, params) {
     const ideVersion = detectIdeVersion();
     initTelemetry({
       harness: ci.name || detectAgentHarness(),
-      version: ideVersion || ci.version || '0.0.0',
+      version: ci.version || ideVersion || '0.0.0',
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',
