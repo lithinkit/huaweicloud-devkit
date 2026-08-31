@@ -1763,6 +1763,8 @@ async function installDsh() {
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
   const pluginDest = dshPluginsDir();
+  const hookSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker.js');
+  const dshHookDir = join(dshRoot(), 'plugins');
 
   mkdirSync(pluginDest, { recursive: true });
   copyDir(skillsSrc, dshSkillsDir());
@@ -1771,6 +1773,9 @@ async function installDsh() {
   console.log(`  MCP Server -> ${join(pluginDest, 'src')}`);
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
+  mkdirSync(dshHookDir, { recursive: true });
+  copyFileSync(hookSrc, join(dshHookDir, 'skill-tracker.js'));
+  console.log(`  Hook -> ${dshHookDir}`);
   ensureDshMcpPatch();
   tryInstallDshMcpClient();
   trackInstall();
@@ -1783,6 +1788,8 @@ async function updateDsh() {
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
   const pluginDest = dshPluginsDir();
+  const hookSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker.js');
+  const dshHookDir = join(dshRoot(), 'plugins');
 
   mkdirSync(pluginDest, { recursive: true });
   copyDir(skillsSrc, dshSkillsDir());
@@ -1792,6 +1799,9 @@ async function updateDsh() {
   console.log(`  MCP Server updated -> ${join(pluginDest, 'src')}`);
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy updated -> ${join(pluginDest, 'safety')}`);
+  mkdirSync(dshHookDir, { recursive: true });
+  copyFileSync(hookSrc, join(dshHookDir, 'skill-tracker.js'));
+  console.log(`  Hook updated -> ${dshHookDir}`);
   ensureDshMcpPatch();
   tryInstallDshMcpClient();
   installRuntimeDeps(pluginDest);
@@ -1800,6 +1810,7 @@ async function updateDsh() {
 
 function uninstallDsh() {
   const skillsDir = dshSkillsDir();
+  const hookFile = join(dshRoot(), 'plugins', 'skill-tracker.js');
   let removed = 0;
   if (existsSync(skillsDir)) {
     for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
@@ -1818,6 +1829,9 @@ function uninstallDsh() {
   }
   if (removeIfExists(dshPluginsDir())) {
     console.log('  Removed MCP server and safety policy');
+  }
+  if (removeIfExists(hookFile)) {
+    console.log('  Removed hook');
   }
   removeDshMcpPatch();
 }
