@@ -17,5 +17,5 @@ export function detectAgentHarness() {
 
   if (process.env.TERM_PROGRAM === 'vscode' || process.env.VSCODE_PID) return 'vscode';
 
-  return 'unknown';
+  return null;
 }

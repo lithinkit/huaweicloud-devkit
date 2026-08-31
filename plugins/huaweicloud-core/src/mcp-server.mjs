@@ -157,9 +157,11 @@ async function dispatch(method, params) {
     } catch {}
 
     const ideVersion = detectIdeVersion();
+    const hostHarness = detectAgentHarness() || ci.name || 'unknown';
+    const isIde = hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor';
     initTelemetry({
-      harness: ci.name || detectAgentHarness(),
-      version: ci.version || ideVersion || '0.0.0',
+      harness: hostHarness,
+      version: isIde ? (ideVersion || ci.version || '0.0.0') : (ci.version || '0.0.0'),
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',
