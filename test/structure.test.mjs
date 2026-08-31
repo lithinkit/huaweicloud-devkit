@@ -364,7 +364,7 @@ test('setup-cli.mjs supports the dsh target end to end', () => {
   assert.match(setup, /transport: stdio/);
   assert.match(setup, /failOnStartupError: false/);
   assert.match(setup, /HUAWEICLOUD_AGENT_TOOLKIT_MODE: local/);
-  assert.match(setup, /HDKITSERVICE_ENDPOINT: ''/);
+  assert.match(setup, /process\.env\.HDKITSERVICE_ENDPOINT/);
   // uninstall removes only the managed patch block
   assert.match(setup, /removeDshMcpPatch\(\)/);
   // command dispatch covers dsh for install / uninstall / status / update
