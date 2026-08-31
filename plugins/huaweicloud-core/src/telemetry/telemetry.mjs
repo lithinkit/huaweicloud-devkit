@@ -310,7 +310,7 @@ function flushEvents() {
       if (resp.ok) {
         for (const event of batch) {
           if (event.key === 'dau:active_today') touchFile(DAU_STAMP);
-          if (event.key === 'plugin:install') touchFile(INSTALL_STAMP);
+          if (event.key === 'plugin:install') touchFile(installStampPath(agentHarness));
           if (event.key === 'plugin:first_use') touchFile(FIRST_USE_STAMP);
         }
       } else {
