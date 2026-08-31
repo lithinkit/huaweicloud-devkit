@@ -17,11 +17,11 @@ try {
 } catch {}
 
 const TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
-const HOOK_EVENTS_PATH = join(TELEMETRY_DIR, 'hook-events.jsonl');
+function hookEventsPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'hook-events.jsonl'); }
 function installStampPath(agent) { return join(TELEMETRY_DIR, agent, 'install-stamp'); }
 function installCounterPath(agent) { return join(TELEMETRY_DIR, agent, 'install-counter'); }
-const DAU_STAMP = join(TELEMETRY_DIR, 'dau-stamp');
-const FIRST_USE_STAMP = join(TELEMETRY_DIR, 'first-use-stamp');
+function dauStampPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'dau-stamp'); }
+function firstUseStampPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'first-use-stamp'); }
 const MACHINE_FINGER_PATH = join(TELEMETRY_DIR, 'machine-finger');
 const INSTALLATION_ID_PATH = join(TELEMETRY_DIR, 'installation-id');
 const USER_HASH_PATH = join(TELEMETRY_DIR, 'user-hash');
@@ -45,13 +45,14 @@ let osTypeStr = osType();
 let osVersionStr = osRelease();
 
 const DEBUG = process.env.HUAWEICLOUD_DEVKIT_DEBUG === 'true';
-const DEBUG_LOG = join(TELEMETRY_DIR, 'telemetry-debug.log');
+function debugLogPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'telemetry-debug.log'); }
 
 function debugLog(msg) {
   if (!DEBUG) return;
   try {
-    if (!existsSync(TELEMETRY_DIR)) mkdirSync(TELEMETRY_DIR, { recursive: true });
-    appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${msg}\n`, 'utf8');
+    const path = debugLogPath();
+    ensureDir(dirname(path));
+    appendFileSync(path, `${new Date().toISOString()} ${msg}\n`, 'utf8');
   } catch (_) {}
 }
 
@@ -192,13 +193,13 @@ function checkDauPing() {
 }
 
 function shouldSendDauPing() {
-  if (!existsSync(DAU_STAMP)) return true;
-  const stampDate = getStampUTCDate(DAU_STAMP);
+  if (!existsSync(dauStampPath())) return true;
+  const stampDate = getStampUTCDate(dauStampPath());
   return stampDate !== getUTCToday();
 }
 
 function shouldSendFirstUsePing() {
-  return !stampExists(FIRST_USE_STAMP);
+  return !stampExists(firstUseStampPath());
 }
 
 export function trackInstall(agent) {
@@ -223,7 +224,8 @@ function consumeInstallCounter(agent) {
 }
 
 export function ingestHookEvents() {
-  const processingPath = HOOK_EVENTS_PATH + '.processing';
+  const hookPath = hookEventsPath();
+  const processingPath = hookPath + '.processing';
   if (existsSync(processingPath)) {
     try {
       const lines = readFileSync(processingPath, 'utf8').trim().split('\n').filter(Boolean);
@@ -233,6 +235,17 @@ export function ingestHookEvents() {
           eventQueue.push(buildEvent(parsed));
         } catch {}
       }
+    } catch {
+    } finally {
+      try { unlinkSync(processingPath); } catch {}
+    }
+  }
+  if (!existsSync(hookPath)) return;
+  try {
+    renameSync(hookPath, processingPath);
+  } catch {
+    return;
+  }
     } catch {
     } finally {
       try { unlinkSync(processingPath); } catch {}
@@ -309,9 +322,9 @@ function flushEvents() {
       debugLog(`POST status=${resp.status} events=${batch.length}`);
       if (resp.ok) {
         for (const event of batch) {
-          if (event.key === 'dau:active_today') touchFile(DAU_STAMP);
+          if (event.key === 'dau:active_today') touchFile(dauStampPath());
           if (event.key === 'plugin:install') touchFile(installStampPath(agentHarness));
-          if (event.key === 'plugin:first_use') touchFile(FIRST_USE_STAMP);
+          if (event.key === 'plugin:first_use') touchFile(firstUseStampPath());
         }
       } else {
         eventQueue = [...batch, ...eventQueue];

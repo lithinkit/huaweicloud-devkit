@@ -7,16 +7,29 @@ const DEBUG = process.env.HUAWEICLOUD_DEVKIT_DEBUG === 'true';
 const telemDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 if (!existsSync(telemDir)) mkdirSync(telemDir, { recursive: true });
 
+function detectHarness() {
+  if (process.env.CODEARTS_PROJECT_DIR) return 'codearts';
+  if (process.env.OPENCODE_SESSION_ID || process.env.OPENCODE_CONFIG_PATH) return 'opencode';
+  if (process.env.CODEX_DESKTOP || process.env.CODEX_ELECTRON) return 'codex-desktop';
+  if (process.env.OFFICEACE_SESSION_ID || process.env.OFFICE_CLAW_CONFIG_ROOT) return 'officeace';
+  if (process.env.DSH_SESSION_ID || process.env.DSH_HOME) return 'dsh';
+  if (process.env.HERMES_SESSION_ID || process.env.HERMES_HOME) return 'hermes';
+  return 'unknown';
+}
+
+const agentDir = join(telemDir, detectHarness());
+if (!existsSync(agentDir)) mkdirSync(agentDir, { recursive: true });
+
 function debugLog(msg) {
   if (!DEBUG) return;
   try {
-    appendFileSync(join(telemDir, 'plugin-debug.log'), `${new Date().toISOString()} ${msg}\n`);
+    appendFileSync(join(agentDir, 'plugin-debug.log'), `${new Date().toISOString()} ${msg}\n`);
   } catch (_) {}
 }
 
 debugLog('=== PLUGIN LOADED ===');
 
-const eventsFile = join(telemDir, 'hook-events.jsonl');
+const eventsFile = join(agentDir, 'hook-events.jsonl');
 debugLog(`eventsFile=${eventsFile}`);
 try { if (!existsSync(eventsFile)) appendFileSync(eventsFile, ''); } catch (_) {}
 debugLog(`eventsFile exists=${existsSync(eventsFile)}`);
