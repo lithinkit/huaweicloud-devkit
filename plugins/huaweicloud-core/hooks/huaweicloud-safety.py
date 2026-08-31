@@ -104,6 +104,31 @@ def record_cli_event(text):
         pass
 
 
+def record_skill_event(data):
+    tool_name = data.get("tool_name", "")
+    if "retrieve_skill" not in tool_name:
+        return
+    tool_input = data.get("tool_input", {})
+    if isinstance(tool_input, dict):
+        name = tool_input.get("name", "")
+    elif isinstance(tool_input, str):
+        try:
+            name = json.loads(tool_input).get("name", "")
+        except Exception:
+            return
+    else:
+        return
+    if not name:
+        return
+    event = {"key": "skill:retrieve", "value": name}
+    try:
+        TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
+        with HOOK_EVENTS_PATH.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event) + "\n")
+    except Exception:
+        pass
+
+
 def command_text(tool_input):
     if isinstance(tool_input, str):
         return tool_input
@@ -175,6 +200,7 @@ def main():
     hermes = "hook_event_name" in data
 
     record_cli_event(text)
+    record_skill_event(data)
 
     if CONFIG_FILE_RE and CONFIG_FILE_RE.search(text):
         deny("reading Huawei Cloud credential/profile files can expose AK/SK or tokens. Use redacted toolkit tools.", hermes)
