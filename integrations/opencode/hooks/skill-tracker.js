@@ -1,24 +1,11 @@
 import { appendFileSync, mkdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const DEBUG = process.env.HUAWEICLOUD_DEVKIT_DEBUG === 'true';
 
-const telemDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
-if (!existsSync(telemDir)) mkdirSync(telemDir, { recursive: true });
-
-function detectHarness() {
-  const selfPath = new URL(import.meta.url).pathname;
-  if (selfPath.includes('/.codeartsdoer/')) return 'codearts';
-  if (selfPath.includes('/.config/opencode/')) return 'opencode';
-  if (process.env.CODEX_DESKTOP || process.env.CODEX_ELECTRON) return 'codex-desktop';
-  if (process.env.OFFICEACE_SESSION_ID || process.env.OFFICE_CLAW_CONFIG_ROOT) return 'officeace';
-  if (process.env.DSH_SESSION_ID || process.env.DSH_HOME) return 'dsh';
-  if (process.env.HERMES_SESSION_ID || process.env.HERMES_HOME) return 'hermes';
-  return 'unknown';
-}
-
-const agentDir = join(telemDir, detectHarness());
+const selfDir = dirname(fileURLToPath(import.meta.url));
+const agentDir = join(selfDir, '..', 'huaweicloud-plugins', 'telemetry');
 if (!existsSync(agentDir)) mkdirSync(agentDir, { recursive: true });
 
 function debugLog(msg) {

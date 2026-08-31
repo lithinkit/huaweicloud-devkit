@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 let PLUGIN_VERSION = '0.0.0';
 try {
-  const __telemDir = dirname(fileURLToPath(import.meta.url));
-  const pkgRoots = [join(__telemDir, '..', '..', 'package.json'), join(__telemDir, '..', '..', '..', '..', 'package.json')];
-  for (const p of pkgRoots) {
+  const pkg1 = join(PLUGIN_DIR, 'package.json');
+  const pkg2 = join(PLUGIN_DIR, '..', '..', 'package.json');
+  for (const p of [pkg1, pkg2]) {
     if (existsSync(p)) {
       const v = JSON.parse(readFileSync(p, 'utf8')).version;
       if (v) { PLUGIN_VERSION = v; break; }
@@ -16,15 +16,19 @@ try {
   }
 } catch {}
 
-const TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
-function hookEventsPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'hook-events.jsonl'); }
-function installStampPath(agent) { return join(TELEMETRY_DIR, agent, 'install-stamp'); }
-function installCounterPath(agent) { return join(TELEMETRY_DIR, agent, 'install-counter'); }
-function dauStampPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'dau-stamp'); }
-function firstUseStampPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'first-use-stamp'); }
-const MACHINE_FINGER_PATH = join(TELEMETRY_DIR, 'machine-finger');
-const INSTALLATION_ID_PATH = join(TELEMETRY_DIR, 'installation-id');
-const USER_HASH_PATH = join(TELEMETRY_DIR, 'user-hash');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PLUGIN_DIR = join(__dirname, '..', '..');
+const AGENT_TELEMETRY_DIR = join(PLUGIN_DIR, 'telemetry');
+const GLOBAL_TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
+function hookEventsPath() { return join(AGENT_TELEMETRY_DIR, 'hook-events.jsonl'); }
+function installStampPath() { return join(AGENT_TELEMETRY_DIR, 'install-stamp'); }
+function installCounterPath() { return join(AGENT_TELEMETRY_DIR, 'install-counter'); }
+function dauStampPath() { return join(AGENT_TELEMETRY_DIR, 'dau-stamp'); }
+function firstUseStampPath() { return join(AGENT_TELEMETRY_DIR, 'first-use-stamp'); }
+const MACHINE_FINGER_PATH = join(GLOBAL_TELEMETRY_DIR, 'machine-finger');
+const INSTALLATION_ID_PATH = join(GLOBAL_TELEMETRY_DIR, 'installation-id');
+const USER_HASH_PATH = join(GLOBAL_TELEMETRY_DIR, 'user-hash');
 
 const MAX_QUEUE_SIZE = 500;
 const FLUSH_INTERVAL_MS = 60_000;
@@ -45,7 +49,7 @@ let osTypeStr = osType();
 let osVersionStr = osRelease();
 
 const DEBUG = process.env.HUAWEICLOUD_DEVKIT_DEBUG === 'true';
-function debugLogPath(agent = agentHarness) { return join(TELEMETRY_DIR, agent, 'telemetry-debug.log'); }
+function debugLogPath() { return join(AGENT_TELEMETRY_DIR, 'telemetry-debug.log'); }
 
 function debugLog(msg) {
   if (!DEBUG) return;
@@ -56,7 +60,7 @@ function debugLog(msg) {
   } catch (_) {}
 }
 
-function ensureDir(dirPath = TELEMETRY_DIR) {
+function ensureDir(dirPath = GLOBAL_TELEMETRY_DIR) {
   if (!existsSync(dirPath)) {
     mkdirSync(dirPath, { recursive: true });
   }
@@ -202,24 +206,24 @@ function shouldSendFirstUsePing() {
   return !stampExists(firstUseStampPath());
 }
 
-export function trackInstall(agent) {
+export function trackInstall() {
   if (!isTelemetryEnabled()) return;
-  ensureDir();
-  writeTextFile(installStampPath(agent), new Date().toISOString());
+  ensureDir(AGENT_TELEMETRY_DIR);
+  writeTextFile(installStampPath(), new Date().toISOString());
 
   let count = 0;
-  const existing = readTextFile(installCounterPath(agent));
+  const existing = readTextFile(installCounterPath());
   if (existing) count = parseInt(existing, 10) || 0;
-  writeTextFile(installCounterPath(agent), String(count + 1));
+  writeTextFile(installCounterPath(), String(count + 1));
 }
 
-function consumeInstallCounter(agent) {
-  ensureDir();
-  const existing = readTextFile(installCounterPath(agent));
+function consumeInstallCounter() {
+  ensureDir(AGENT_TELEMETRY_DIR);
+  const existing = readTextFile(installCounterPath());
   if (!existing) return 0;
   const count = parseInt(existing, 10) || 0;
   if (count <= 0) return 0;
-  writeTextFile(installCounterPath(agent), '0');
+  writeTextFile(installCounterPath(), '0');
   return count;
 }
 
@@ -245,29 +249,6 @@ export function ingestHookEvents() {
     renameSync(hookPath, processingPath);
   } catch {
     return;
-  }
-    } catch {
-    } finally {
-      try { unlinkSync(processingPath); } catch {}
-    }
-  }
-  if (!existsSync(HOOK_EVENTS_PATH)) return;
-  try {
-    renameSync(HOOK_EVENTS_PATH, processingPath);
-  } catch {
-    return;
-  }
-  try {
-    const lines = readFileSync(processingPath, 'utf8').trim().split('\n').filter(Boolean);
-    for (const line of lines) {
-      try {
-        const parsed = JSON.parse(line);
-        eventQueue.push(buildEvent(parsed));
-      } catch {}
-    }
-  } catch {
-  } finally {
-    try { unlinkSync(processingPath); } catch {}
   }
 }
 
@@ -323,7 +304,7 @@ function flushEvents() {
       if (resp.ok) {
         for (const event of batch) {
           if (event.key === 'dau:active_today') touchFile(dauStampPath());
-          if (event.key === 'plugin:install') touchFile(installStampPath(agentHarness));
+          if (event.key === 'plugin:install') touchFile(installStampPath());
           if (event.key === 'plugin:first_use') touchFile(firstUseStampPath());
         }
       } else {
@@ -347,11 +328,11 @@ export function initTelemetry({ harness, version }) {
 
   if (!isTelemetryEnabled()) return;
 
-  if (!stampExists(installStampPath(agentHarness)) && !existsSync(installCounterPath(agentHarness))) {
-    trackInstall(agentHarness);
+  if (!stampExists(installStampPath()) && !existsSync(installCounterPath())) {
+    trackInstall();
   }
 
-  const pendingInstalls = consumeInstallCounter(agentHarness);
+  const pendingInstalls = consumeInstallCounter();
   for (let i = 0; i < pendingInstalls; i++) {
     enqueueEvent({ key: 'plugin:install', value: '1' });
   }

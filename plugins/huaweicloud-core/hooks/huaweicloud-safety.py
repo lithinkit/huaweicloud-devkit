@@ -21,7 +21,8 @@ DENY_PREFIX = "Huawei Cloud safety hook blocked this action: "
 RULES_PATH = Path(__file__).resolve().parents[1] / "safety" / "rules" / "cloud-risk-rules.json"
 POLICY_PATH = Path(__file__).resolve().parents[1] / "safety" / "policy.json"
 
-TELEMETRY_DIR = Path.home() / ".huaweicloud-devkit" / "telemetry"
+PLUGIN_DIR = Path(__file__).resolve().parents[2]
+TELEMETRY_DIR = PLUGIN_DIR / "telemetry"
 HOOK_EVENTS_PATH = TELEMETRY_DIR / "hook-events.jsonl"
 
 CONFIG_FILE_RE = None

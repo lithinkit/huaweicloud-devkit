@@ -1,4 +1,4 @@
-import {
+﻿import {
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -677,7 +677,7 @@ async function installOpenCode() {
   copyFileSync(pluginSrc, join(opcPlugins, 'skill-tracker.js'));
   console.log(`  Plugin -> ${opcPlugins}`);
   updateOpenCodeConfig(pluginDest);
-  trackInstall('opencode');
+  trackInstall();
   installRuntimeDeps(pluginDest);
 }
 
@@ -876,7 +876,7 @@ async function installOpenClaw() {
   }
 
   writeFileSync(join(pluginDest, '.installed'), new Date().toISOString());
-  trackInstall('openclaw');
+  trackInstall();
   installRuntimeDeps(pluginDest);
 }
 
@@ -1009,7 +1009,7 @@ async function installCodexDesktop() {
     console.log('  Cleaned old install location');
   }
 
-  trackInstall('codex-desktop');
+  trackInstall();
   installRuntimeDeps(pluginDest);
 }
 
@@ -1188,7 +1188,7 @@ async function installCodeArts() {
 
   registerCodeartsMcp(codeartsMcpSettingsFile());
   registerCodeartsMcp(codeartsProjectMcpSettingsFile());
-  trackInstall('codearts');
+  trackInstall();
   installRuntimeDeps(pluginDest);
 }
 
@@ -1345,7 +1345,7 @@ async function installWorkBuddy() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   ensureWorkbuddyMcpConfig();
-  trackInstall('workbuddy');
+  trackInstall();
   installRuntimeDeps(pluginDest);
 }
 
@@ -1488,7 +1488,7 @@ async function installAtomCode() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   ensureAtomcodeMcpConfig();
-  trackInstall('atomcode');
+  trackInstall();
   installRuntimeDeps(pluginDest);
 }
 
@@ -1773,7 +1773,7 @@ async function installDsh() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
   ensureDshMcpPatch();
   tryInstallDshMcpClient();
-  trackInstall('dsh');
+  trackInstall();
   installRuntimeDeps(pluginDest);
   writeFileSync(join(pluginDest, '.installed'), new Date().toISOString());
 }
@@ -1893,7 +1893,7 @@ async function installOfficeAce() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   installRuntimeDeps(pluginDest);
-  trackInstall('officeace');
+  trackInstall();
   ensureOfficeaceMcpInSqlite();
   registerOfficeaceSkillEntries();
 }
@@ -2199,7 +2199,7 @@ async function installHermes() {
 
   if (!skipMcp) ensureHermesMcpConfig();
   ensureHermesHooksConfig();
-  trackInstall('hermes');
+  trackInstall();
   if (!skipMcp) installRuntimeDeps(pluginDest);
   if (!skipMcp) ensureHermesMcpSdk();
 }
@@ -2364,19 +2364,6 @@ function parseTarget() {
   process.exit(1);
 }
 
-function recordTelemetryInstall() {
-  const telemDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
-  mkdirSync(telemDir, { recursive: true });
-  writeFileSync(join(telemDir, 'install-stamp'), new Date().toISOString());
-
-  const counterPath = join(telemDir, 'install-counter');
-  let count = 0;
-  if (existsSync(counterPath)) {
-    count = parseInt(readFileSync(counterPath, 'utf8').trim(), 10) || 0;
-  }
-  writeFileSync(counterPath, String(count + 1));
-}
-
 async function cmdInstall() {
   const target = parseTarget();
   console.log(BANNER);
@@ -2442,7 +2429,7 @@ async function cmdInstall() {
       installCodex();
     }
   }
-  recordTelemetryInstall();
+
   console.log(`\n\x1b[32mInstallation complete!\x1b[0m`);
   const appName =
     target === 'codearts'
