@@ -677,7 +677,7 @@ async function installOpenCode() {
   copyFileSync(pluginSrc, join(opcPlugins, 'skill-tracker.js'));
   console.log(`  Plugin -> ${opcPlugins}`);
   updateOpenCodeConfig(pluginDest);
-  trackInstall();
+  trackInstall('opencode');
   installRuntimeDeps(pluginDest);
 }
 
@@ -876,7 +876,7 @@ async function installOpenClaw() {
   }
 
   writeFileSync(join(pluginDest, '.installed'), new Date().toISOString());
-  trackInstall();
+  trackInstall('openclaw');
   installRuntimeDeps(pluginDest);
 }
 
@@ -1009,7 +1009,7 @@ async function installCodexDesktop() {
     console.log('  Cleaned old install location');
   }
 
-  trackInstall();
+  trackInstall('codex-desktop');
   installRuntimeDeps(pluginDest);
 }
 
@@ -1188,7 +1188,7 @@ async function installCodeArts() {
 
   registerCodeartsMcp(codeartsMcpSettingsFile());
   registerCodeartsMcp(codeartsProjectMcpSettingsFile());
-  trackInstall();
+  trackInstall('codearts');
   installRuntimeDeps(pluginDest);
 }
 
@@ -1345,7 +1345,7 @@ async function installWorkBuddy() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   ensureWorkbuddyMcpConfig();
-  trackInstall();
+  trackInstall('workbuddy');
   installRuntimeDeps(pluginDest);
 }
 
@@ -1488,7 +1488,7 @@ async function installAtomCode() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   ensureAtomcodeMcpConfig();
-  trackInstall();
+  trackInstall('atomcode');
   installRuntimeDeps(pluginDest);
 }
 
@@ -1773,7 +1773,7 @@ async function installDsh() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
   ensureDshMcpPatch();
   tryInstallDshMcpClient();
-  trackInstall();
+  trackInstall('dsh');
   installRuntimeDeps(pluginDest);
   writeFileSync(join(pluginDest, '.installed'), new Date().toISOString());
 }
@@ -1893,7 +1893,7 @@ async function installOfficeAce() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   installRuntimeDeps(pluginDest);
-  trackInstall();
+  trackInstall('officeace');
   ensureOfficeaceMcpInSqlite();
   registerOfficeaceSkillEntries();
 }
@@ -2199,7 +2199,7 @@ async function installHermes() {
 
   if (!skipMcp) ensureHermesMcpConfig();
   ensureHermesHooksConfig();
-  trackInstall();
+  trackInstall('hermes');
   if (!skipMcp) installRuntimeDeps(pluginDest);
   if (!skipMcp) ensureHermesMcpSdk();
 }

@@ -18,8 +18,8 @@ try {
 
 const TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 const HOOK_EVENTS_PATH = join(TELEMETRY_DIR, 'hook-events.jsonl');
-const INSTALL_STAMP = join(TELEMETRY_DIR, 'install-stamp');
-const INSTALL_COUNTER = join(TELEMETRY_DIR, 'install-counter');
+function installStampPath(agent) { return join(TELEMETRY_DIR, `install-stamp-${agent}`); }
+function installCounterPath(agent) { return join(TELEMETRY_DIR, `install-counter-${agent}`); }
 const DAU_STAMP = join(TELEMETRY_DIR, 'dau-stamp');
 const FIRST_USE_STAMP = join(TELEMETRY_DIR, 'first-use-stamp');
 const MACHINE_FINGER_PATH = join(TELEMETRY_DIR, 'machine-finger');
@@ -201,24 +201,24 @@ function shouldSendFirstUsePing() {
   return !stampExists(FIRST_USE_STAMP);
 }
 
-export function trackInstall() {
+export function trackInstall(agent) {
   if (!isTelemetryEnabled()) return;
   ensureDir();
-  writeTextFile(INSTALL_STAMP, new Date().toISOString());
+  writeTextFile(installStampPath(agent), new Date().toISOString());
 
   let count = 0;
-  const existing = readTextFile(INSTALL_COUNTER);
+  const existing = readTextFile(installCounterPath(agent));
   if (existing) count = parseInt(existing, 10) || 0;
-  writeTextFile(INSTALL_COUNTER, String(count + 1));
+  writeTextFile(installCounterPath(agent), String(count + 1));
 }
 
-function consumeInstallCounter() {
+function consumeInstallCounter(agent) {
   ensureDir();
-  const existing = readTextFile(INSTALL_COUNTER);
+  const existing = readTextFile(installCounterPath(agent));
   if (!existing) return 0;
   const count = parseInt(existing, 10) || 0;
   if (count <= 0) return 0;
-  writeTextFile(INSTALL_COUNTER, '0');
+  writeTextFile(installCounterPath(agent), '0');
   return count;
 }
 
@@ -334,11 +334,11 @@ export function initTelemetry({ harness, version }) {
 
   if (!isTelemetryEnabled()) return;
 
-  if (!stampExists(INSTALL_STAMP) && !existsSync(INSTALL_COUNTER)) {
-    trackInstall();
+  if (!stampExists(installStampPath(agentHarness)) && !existsSync(installCounterPath(agentHarness))) {
+    trackInstall(agentHarness);
   }
 
-  const pendingInstalls = consumeInstallCounter();
+  const pendingInstalls = consumeInstallCounter(agentHarness);
   for (let i = 0; i < pendingInstalls; i++) {
     enqueueEvent({ key: 'plugin:install', value: '1' });
   }
