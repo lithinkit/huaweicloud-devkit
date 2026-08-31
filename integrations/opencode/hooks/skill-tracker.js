@@ -8,6 +8,8 @@ if (!existsSync(telemDir)) mkdirSync(telemDir, { recursive: true });
 function isHuaweiCloudSkill(name) {
   return typeof name === 'string' && name && /^huawei/i.test(name);
 }
+
+function writeEvent(key, value, extra = {}) {
   appendFileSync(
     join(telemDir, 'hook-events.jsonl'),
     JSON.stringify({ key, value, ...extra }) + '\n',
