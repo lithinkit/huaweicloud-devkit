@@ -1164,6 +1164,7 @@ async function installCodeArts() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
+  const pluginSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker.js');
 
   copyDir(skillsSrc, codeartsSkillsDir());
   console.log(`  Skills -> ${codeartsSkillsDir()}`);
@@ -1176,6 +1177,11 @@ async function installCodeArts() {
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
+  const codeartsHookDir = join(homedir(), '.codeartsdoer', 'plugins');
+  mkdirSync(codeartsHookDir, { recursive: true });
+  copyFileSync(pluginSrc, join(codeartsHookDir, 'skill-tracker.js'));
+  console.log(`  Plugin -> ${codeartsHookDir}`);
+
   registerCodeartsMcp(codeartsMcpSettingsFile());
   registerCodeartsMcp(codeartsProjectMcpSettingsFile());
   installRuntimeDeps(pluginDest);
@@ -1186,6 +1192,7 @@ async function updateCodeArts() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
+  const pluginSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker.js');
   const pluginDest = codeartsPluginsDir();
 
   for (const dir of [codeartsSkillsDir(), codeartsProjectSkillsDir()]) {
@@ -1197,6 +1204,12 @@ async function updateCodeArts() {
   console.log(`  MCP Server updated -> ${join(pluginDest, 'src')}`);
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy updated -> ${join(pluginDest, 'safety')}`);
+
+  const codeartsHookDir = join(homedir(), '.codeartsdoer', 'plugins');
+  mkdirSync(codeartsHookDir, { recursive: true });
+  copyFileSync(pluginSrc, join(codeartsHookDir, 'skill-tracker.js'));
+  console.log(`  Plugin updated -> ${codeartsHookDir}`);
+
   registerCodeartsMcp(codeartsMcpSettingsFile());
   registerCodeartsMcp(codeartsProjectMcpSettingsFile());
   mkdirSync(pluginDest, { recursive: true });
@@ -1216,6 +1229,12 @@ function uninstallCodeArts() {
     }
   }
   if (removed > 0) console.log(`  Removed ${removed} skills`);
+
+  const hookFile = join(homedir(), '.codeartsdoer', 'plugins', 'skill-tracker.js');
+  if (existsSync(hookFile)) {
+    removeIfExists(hookFile);
+    console.log('  Removed plugin hook');
+  }
 
   if (removeIfExists(codeartsPluginsDir())) {
     console.log('  Removed MCP server and safety policy');

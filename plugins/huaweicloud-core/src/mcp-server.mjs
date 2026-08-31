@@ -2,7 +2,27 @@
 import { stdin, stdout } from 'node:process';
 import { rmSync, existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+import { homedir, platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
+
+if (existsSync(join(homedir(), '.codeartsdoer'))) {
+  process.env.CODEARTS_PROJECT_DIR = process.env.CODEARTS_PROJECT_DIR || '1';
+}
+
+function detectIdeVersion() {
+  const bases = [];
+  if (process.env.ProgramFiles) bases.push(join(process.env.ProgramFiles, 'CodeArts Agent'));
+  if (process.env['ProgramFiles(x86)']) bases.push(join(process.env['ProgramFiles(x86)'], 'CodeArts Agent'));
+  if (process.env.ProgramW6432) bases.push(join(process.env.ProgramW6432, 'CodeArts Agent'));
+  if (process.env.LOCALAPPDATA) bases.push(join(process.env.LOCALAPPDATA, 'Programs', 'CodeArts'));
+  for (const base of bases) {
+    const p = join(base, 'resources', 'app', 'package.json');
+    try {
+      if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8')).version || null;
+    } catch {}
+  }
+  return null;
+}
 
 import { TOOL_DEFINITIONS, callTool } from './tools.mjs';
 import { initTelemetry } from './telemetry/telemetry.mjs';
@@ -140,9 +160,10 @@ async function dispatch(method, params) {
       ]);
     } catch {}
 
+    const ideVersion = detectIdeVersion();
     initTelemetry({
-      harness: ci.name || detectAgentHarness(),
-      version: ci.version || '0.0.0',
+      harness: process.env.CODEARTS_PROJECT_DIR ? 'codearts' : (ci.name || detectAgentHarness()),
+      version: ideVersion || ci.version || '0.0.0',
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',

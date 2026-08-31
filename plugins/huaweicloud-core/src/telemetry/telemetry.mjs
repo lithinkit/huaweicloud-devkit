@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, statSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, statSync, mkdirSync, renameSync, unlinkSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir, hostname, type as osType, networkInterfaces, release as osRelease } from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
@@ -43,6 +43,17 @@ let agentHarness = 'unknown';
 let agentVersion = '0.0.0';
 let osTypeStr = osType();
 let osVersionStr = osRelease();
+
+const DEBUG = process.env.HUAWEICLOUD_DEVKIT_DEBUG === 'true';
+const DEBUG_LOG = join(TELEMETRY_DIR, 'telemetry-debug.log');
+
+function debugLog(msg) {
+  if (!DEBUG) return;
+  try {
+    if (!existsSync(TELEMETRY_DIR)) mkdirSync(TELEMETRY_DIR, { recursive: true });
+    appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${msg}\n`, 'utf8');
+  } catch (_) {}
+}
 
 function ensureDir() {
   if (!existsSync(TELEMETRY_DIR)) {
@@ -212,8 +223,22 @@ function consumeInstallCounter() {
 }
 
 export function ingestHookEvents() {
-  if (!existsSync(HOOK_EVENTS_PATH)) return;
   const processingPath = HOOK_EVENTS_PATH + '.processing';
+  if (existsSync(processingPath)) {
+    try {
+      const lines = readFileSync(processingPath, 'utf8').trim().split('\n').filter(Boolean);
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          eventQueue.push(buildEvent(parsed));
+        } catch {}
+      }
+    } catch {
+    } finally {
+      try { unlinkSync(processingPath); } catch {}
+    }
+  }
+  if (!existsSync(HOOK_EVENTS_PATH)) return;
   try {
     renameSync(HOOK_EVENTS_PATH, processingPath);
   } catch {
@@ -266,6 +291,8 @@ function flushEvents() {
   isFlushing = true;
 
   const batch = eventQueue.splice(0, BATCH_SIZE);
+  const keys = batch.map((e) => e.key).join(',');
+  debugLog(`FLUSH start events=${batch.length} harness=${batch[0].harness} agentVersion=${batch[0].agentVersion} keys=[${keys}]`);
 
   const endpoint = getEndpoint();
   const controller = new AbortController();
@@ -279,6 +306,7 @@ function flushEvents() {
   })
     .then((resp) => {
       clearTimeout(timer);
+      debugLog(`POST status=${resp.status} events=${batch.length}`);
       if (resp.ok) {
         for (const event of batch) {
           if (event.key === 'dau:active_today') touchFile(DAU_STAMP);
@@ -290,8 +318,9 @@ function flushEvents() {
       }
       isFlushing = false;
     })
-    .catch(() => {
+    .catch((err) => {
       clearTimeout(timer);
+      debugLog(`POST FAIL err=${err.message} events=${batch.length}`);
       eventQueue = [...batch, ...eventQueue];
       isFlushing = false;
     });
@@ -324,4 +353,7 @@ export function initTelemetry({ harness, version }) {
     checkDauPing();
     if (eventQueue.length > 0) setImmediate(() => flushEvents());
   }, FLUSH_INTERVAL_MS);
+
+  ingestHookEvents();
+  if (eventQueue.length > 0) setImmediate(() => flushEvents());
 }

@@ -25,6 +25,13 @@ Copy-Item -Recurse -Force -Path (Join-Path $sourceSrc "*") -Destination $targetS
 Copy-Item -Recurse -Force -Path (Join-Path $sourceSafety "*") -Destination $targetSafety
 Copy-Item -Recurse -Force -Path (Join-Path $RepoRoot "integrations\opencode\commands\*") -Destination $targetCommands
 
+# skill-tracker.js hook file
+$hookSrc = Join-Path $RepoRoot "integrations\opencode\hooks\skill-tracker.js"
+$pluginDst = Join-Path $OpenCodeConfigRoot "plugins"
+New-Item -ItemType Directory -Force -Path $pluginDst | Out-Null
+Copy-Item -LiteralPath $hookSrc -Destination (Join-Path $pluginDst "skill-tracker.js") -Force
+Write-Host "Hook skill-tracker.js -> $pluginDst\skill-tracker.js"
+
 Write-Host "OpenCode skills installed to: $targetSkills"
 Write-Host "OpenCode commands installed to: $targetCommands"
 Write-Host "MCP server (src) installed to: $targetSrc"

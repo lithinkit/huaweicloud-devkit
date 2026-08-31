@@ -2,18 +2,32 @@ import { appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
+const DEBUG = process.env.HUAWEICLOUD_DEVKIT_DEBUG === 'true';
+
 const telemDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 if (!existsSync(telemDir)) mkdirSync(telemDir, { recursive: true });
+
+function debugLog(msg) {
+  if (!DEBUG) return;
+  try {
+    appendFileSync(join(telemDir, 'plugin-debug.log'), `${new Date().toISOString()} ${msg}\n`);
+  } catch (_) {}
+}
+
+debugLog('=== PLUGIN LOADED ===');
+
+const eventsFile = join(telemDir, 'hook-events.jsonl');
+debugLog(`eventsFile=${eventsFile}`);
+try { if (!existsSync(eventsFile)) appendFileSync(eventsFile, ''); } catch (_) {}
+debugLog(`eventsFile exists=${existsSync(eventsFile)}`);
 
 function isHuaweiCloudSkill(name) {
   return typeof name === 'string' && name && /^huawei/i.test(name);
 }
 
 function writeEvent(key, value, extra = {}) {
-  appendFileSync(
-    join(telemDir, 'hook-events.jsonl'),
-    JSON.stringify({ key, value, ...extra }) + '\n',
-  );
+  const data = JSON.stringify({ key, value, ...extra }) + '\n';
+  try { appendFileSync(eventsFile, data); } catch (_) {}
 }
 
 // ── CLI command classification ────────────────────────────────
@@ -32,7 +46,6 @@ const WRITE_VERBS = new RegExp(
 function classifyHcloud(text) {
   const m = HCLOUD_RE.exec(text);
   if (!m) return null;
-
   const rest = m[1].trim();
   const cmdEnd = rest.search(/\s[|&<>;]/);
   const cmdPart = cmdEnd > -1 ? rest.slice(0, cmdEnd) : rest;
@@ -41,7 +54,6 @@ function classifyHcloud(text) {
   );
   const cmd = parts.join(' ');
   if (!cmd) return null;
-
   if (READ_VERBS.test(cmd)) return { key: 'cli:read', value: `hcloud ${cmd}` };
   if (WRITE_VERBS.test(cmd)) return { key: 'cli:write', value: `hcloud ${cmd}` };
   return { key: 'cli:invoke', value: `hcloud ${cmd}` };
@@ -50,30 +62,32 @@ function classifyHcloud(text) {
 // ── Plugin export ────────────────────────────────────────────
 
 export default function () {
+  debugLog('=== PLUGIN EXPORT CALLED ===');
   return {
     'tool.execute.before': function (input, output) {
       try {
-        // Skill activation tracking
+        debugLog(`HOOK tool.execute.before tool=${input?.tool}`);
         if (input.tool === 'skill') {
           const name = output?.args?.name;
+          debugLog(`SKILL name=${name}`);
           if (isHuaweiCloudSkill(name)) {
             writeEvent('skill:retrieve', name);
+            debugLog(`SKILL TRACKED: ${name}`);
           }
           return;
         }
-
-        // CLI command classification
         if (input.tool === 'bash') {
           const cmd = output?.args?.command || '';
           if (!cmd) return;
           const result = classifyHcloud(cmd);
           if (result) writeEvent(result.key, result.value, { capability: 'cli' });
         }
-      } catch {}
+      } catch (e) {
+        debugLog(`HOOK ERROR: ${e?.message || e}`);
+      }
     },
     event: function ({ event }) {
       try {
-        // /skills command — detect via Base directory line
         if (event?.type === 'message.part.updated') {
           const text = event?.properties?.part?.text;
           if (typeof text === 'string') {
@@ -81,7 +95,11 @@ export default function () {
             if (m && isHuaweiCloudSkill(m[1])) writeEvent('skill:retrieve', m[1]);
           }
         }
-      } catch {}
+      } catch (e) {
+        debugLog(`EVENT ERROR: ${e?.message || e}`);
+      }
     },
   };
 }
+
+debugLog('=== PLUGIN INIT DONE ===');
