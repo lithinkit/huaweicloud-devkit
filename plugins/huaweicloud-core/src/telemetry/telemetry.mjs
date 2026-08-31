@@ -55,9 +55,9 @@ function debugLog(msg) {
   } catch (_) {}
 }
 
-function ensureDir() {
-  if (!existsSync(TELEMETRY_DIR)) {
-    mkdirSync(TELEMETRY_DIR, { recursive: true });
+function ensureDir(dirPath = TELEMETRY_DIR) {
+  if (!existsSync(dirPath)) {
+    mkdirSync(dirPath, { recursive: true });
   }
 }
 
@@ -70,12 +70,12 @@ function readTextFile(filePath) {
 }
 
 function writeTextFile(filePath, content) {
-  ensureDir();
+  ensureDir(dirname(filePath));
   writeFileSync(filePath, content, 'utf8');
 }
 
 function touchFile(filePath) {
-  ensureDir();
+  ensureDir(dirname(filePath));
   writeFileSync(filePath, '', 'utf8');
 }
 
