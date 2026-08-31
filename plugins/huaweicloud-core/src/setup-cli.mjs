@@ -1581,22 +1581,9 @@ function dshMcpServerPath() {
 
 function dshPatchBlock() {
   const hcloudBin = findHcloudBin();
-  const endpoint = process.env.HDKITSERVICE_ENDPOINT || '';
-  const telemEndpoint = process.env.HUAWEICLOUD_DEVKIT_TELEMETRY_ENDPOINT || '';
   const envLines = ['          HUAWEICLOUD_AGENT_TOOLKIT_MODE: local'];
   if (hcloudBin) {
     envLines.push(`          HCLOUD_BIN: '${hcloudBin.replace(/\\/g, '/').replace(/'/g, "''")}'`);
-  }
-  const argsLines = [
-    `          - '${dshMcpServerPath().replace(/'/g, "''")}'`,
-  ];
-  if (endpoint) {
-    argsLines.push("          - '--hdkitservice-endpoint'");
-    argsLines.push(`          - '${endpoint}'`);
-  }
-  if (telemEndpoint) {
-    argsLines.push("          - '--telemetry-endpoint'");
-    argsLines.push(`          - '${telemEndpoint}'`);
   }
   return [
     DSH_MCP_PATCH_START,
@@ -1608,7 +1595,7 @@ function dshPatchBlock() {
     '        transport: stdio',
     '        command: node',
     '        args:',
-    ...argsLines,
+    `          - '${dshMcpServerPath().replace(/'/g, "''")}'`,
     '        env:',
     ...envLines,
     '        failOnStartupError: false',
