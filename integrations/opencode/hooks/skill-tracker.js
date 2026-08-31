@@ -5,7 +5,9 @@ import { homedir } from 'node:os';
 const telemDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 if (!existsSync(telemDir)) mkdirSync(telemDir, { recursive: true });
 
-function writeEvent(key, value, extra = {}) {
+function isHuaweiCloudSkill(name) {
+  return typeof name === 'string' && name && /^huawei/i.test(name);
+}
   appendFileSync(
     join(telemDir, 'hook-events.jsonl'),
     JSON.stringify({ key, value, ...extra }) + '\n',
@@ -52,7 +54,7 @@ export default function () {
         // Skill activation tracking
         if (input.tool === 'skill') {
           const name = output?.args?.name;
-          if (typeof name === 'string' && name) {
+          if (isHuaweiCloudSkill(name)) {
             writeEvent('skill:retrieve', name);
           }
           return;
@@ -74,7 +76,7 @@ export default function () {
           const text = event?.properties?.part?.text;
           if (typeof text === 'string') {
             const m = text.match(/Base directory for this skill:\s*.*?skills[\/\\]([a-z0-9-]+)/i);
-            if (m) writeEvent('skill:retrieve', m[1]);
+            if (m && isHuaweiCloudSkill(m[1])) writeEvent('skill:retrieve', m[1]);
           }
         }
       } catch {}
