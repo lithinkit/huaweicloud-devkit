@@ -6,7 +6,7 @@ import { homedir, platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 function detectHarnessFromPath() {
-  const selfPath = fileURLToPath(import.meta.url);
+  const selfPath = new URL(import.meta.url).pathname;
   if (selfPath.includes('/.codeartsdoer/')) return 'codearts';
   if (selfPath.includes('/.config/opencode/')) return 'opencode';
   if (selfPath.includes('/.codex/')) return 'codex-desktop';
