@@ -180,7 +180,6 @@ async function dispatch(method, params) {
       ]);
     } catch {}
 
-    const ideVersion = detectIdeVersion();
     const hostHarness = detectHarnessFromPath() || detectAgentHarness() || ci.name || 'unknown';
     const ideVersion = detectIdeVersion();
     const dshVersion = detectDshVersion();
