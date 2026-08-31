@@ -15,7 +15,5 @@ export function detectAgentHarness() {
   if (process.env.ATOM_CODE_SESSION_ID || process.env.ATOMCODE_HOME) return 'atomcode';
   if (process.env.OPENCLAW_SESSION_ID || process.env.OPENCLAW_CONFIG_ROOT) return 'openclaw';
 
-  if (process.env.TERM_PROGRAM === 'vscode' || process.env.VSCODE_PID) return 'vscode';
-
   return null;
 }

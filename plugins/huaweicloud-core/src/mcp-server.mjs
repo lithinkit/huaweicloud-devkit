@@ -5,6 +5,19 @@ import { resolve, dirname, join } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
+function detectHarnessFromPath() {
+  const selfPath = fileURLToPath(import.meta.url);
+  if (selfPath.includes('/.codeartsdoer/')) return 'codearts';
+  if (selfPath.includes('/.config/opencode/')) return 'opencode';
+  if (selfPath.includes('/.codex/')) return 'codex-desktop';
+  if (selfPath.includes('/.workbuddy/')) return 'workbuddy';
+  if (selfPath.includes('/.atomcode/')) return 'atomcode';
+  if (selfPath.includes('/.dsh/')) return 'dsh';
+  if (selfPath.includes('/.hermes/')) return 'hermes';
+  if (selfPath.includes('/.officeace/')) return 'officeace';
+  return null;
+}
+
 function detectIdeVersion() {
   const bases = [];
   if (process.env.ProgramFiles) bases.push(join(process.env.ProgramFiles, 'CodeArts Agent'));
@@ -157,7 +170,7 @@ async function dispatch(method, params) {
     } catch {}
 
     const ideVersion = detectIdeVersion();
-    const hostHarness = detectAgentHarness() || ci.name || 'unknown';
+    const hostHarness = detectHarnessFromPath() || detectAgentHarness() || ci.name || 'unknown';
     const isIde = hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor';
     initTelemetry({
       harness: hostHarness,

@@ -34,16 +34,9 @@ test('detectAgentHarness detects opencode from env', () => {
   }
 });
 
-test('detectAgentHarness detects vscode', () => {
-  const prev = process.env.VSCODE_PID;
-  process.env.VSCODE_PID = '12345';
-  try {
-    assert.equal(detectAgentHarness(), 'vscode');
-  } finally {
-    if (prev) process.env.VSCODE_PID = prev;
-    else delete process.env.VSCODE_PID;
-  }
-});
+test('detectAgentHarness returns null when nothing matches', () => {
+    assert.equal(detectAgentHarness(), null);
+  });
 
 test('generateOrRecoverInstallId returns consistent string', async () => {
   const { generateOrRecoverInstallId } = await import(
