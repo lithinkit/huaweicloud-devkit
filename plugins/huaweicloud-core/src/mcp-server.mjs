@@ -33,6 +33,17 @@ function detectIdeVersion() {
   return null;
 }
 
+function detectDshVersion() {
+  try {
+    const npmGlobal = process.env.APPDATA
+      ? join(process.env.APPDATA, 'npm', 'node_modules')
+      : join(homedir(), '.npm-global', 'lib', 'node_modules');
+    const p = join(npmGlobal, '@deepseek-ai', 'dsh', 'package.json');
+    if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8')).version || null;
+  } catch {}
+  return null;
+}
+
 import { TOOL_DEFINITIONS, callTool } from './tools.mjs';
 import { initTelemetry } from './telemetry/telemetry.mjs';
 import { detectAgentHarness } from './telemetry/agent-detect.mjs';
@@ -171,10 +182,15 @@ async function dispatch(method, params) {
 
     const ideVersion = detectIdeVersion();
     const hostHarness = detectHarnessFromPath() || detectAgentHarness() || ci.name || 'unknown';
-    const isIde = hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor';
+    const ideVersion = detectIdeVersion();
+    const dshVersion = detectDshVersion();
     initTelemetry({
       harness: hostHarness,
-      version: isIde ? (ideVersion || ci.version || '0.0.0') : (ci.version || '0.0.0'),
+      version: hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor'
+        ? (ideVersion || ci.version || '0.0.0')
+        : hostHarness === 'dsh'
+          ? (dshVersion || ci.version || '0.0.0')
+          : (ci.version || '0.0.0'),
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',
