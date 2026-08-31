@@ -18,8 +18,8 @@ try {
 
 const TELEMETRY_DIR = join(homedir(), '.huaweicloud-devkit', 'telemetry');
 const HOOK_EVENTS_PATH = join(TELEMETRY_DIR, 'hook-events.jsonl');
-function installStampPath(agent) { return join(TELEMETRY_DIR, `install-stamp-${agent}`); }
-function installCounterPath(agent) { return join(TELEMETRY_DIR, `install-counter-${agent}`); }
+function installStampPath(agent) { return join(TELEMETRY_DIR, agent, 'install-stamp'); }
+function installCounterPath(agent) { return join(TELEMETRY_DIR, agent, 'install-counter'); }
 const DAU_STAMP = join(TELEMETRY_DIR, 'dau-stamp');
 const FIRST_USE_STAMP = join(TELEMETRY_DIR, 'first-use-stamp');
 const MACHINE_FINGER_PATH = join(TELEMETRY_DIR, 'machine-finger');
