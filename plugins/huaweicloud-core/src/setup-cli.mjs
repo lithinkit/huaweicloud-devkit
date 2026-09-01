@@ -1762,7 +1762,6 @@ async function installDsh() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
-  const hooksDir = join(PLUGIN_ROOT, 'hooks');
   const pluginDest = dshPluginsDir();
   const hookSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker.js');
   const dshHookDir = join(dshRoot(), 'plugins');
@@ -1774,8 +1773,6 @@ async function installDsh() {
   console.log(`  MCP Server -> ${join(pluginDest, 'src')}`);
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
-  copyDir(hooksDir, join(pluginDest, 'hooks'));
-  console.log(`  Hooks -> ${join(pluginDest, 'hooks')}`);
   mkdirSync(dshHookDir, { recursive: true });
   copyFileSync(hookSrc, join(dshHookDir, 'skill-tracker.js'));
   console.log(`  Hook -> ${dshHookDir}`);
@@ -1789,8 +1786,7 @@ async function installDsh() {
 async function updateDsh() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
-  const safetyDir = join(PLUGIN_ROOT, 'safety');
-  const hooksDir = join(PLUGIN_ROOT, 'hooks');
+const safetyDir = join(PLUGIN_ROOT, 'safety');
   const pluginDest = dshPluginsDir();
   const hookSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker.js');
   const dshHookDir = join(dshRoot(), 'plugins');
@@ -1803,8 +1799,6 @@ async function updateDsh() {
   console.log(`  MCP Server updated -> ${join(pluginDest, 'src')}`);
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy updated -> ${join(pluginDest, 'safety')}`);
-  copyDir(hooksDir, join(pluginDest, 'hooks'));
-  console.log(`  Hooks updated -> ${join(pluginDest, 'hooks')}`);
   mkdirSync(dshHookDir, { recursive: true });
   copyFileSync(hookSrc, join(dshHookDir, 'skill-tracker.js'));
   console.log(`  Hook updated -> ${dshHookDir}`);
