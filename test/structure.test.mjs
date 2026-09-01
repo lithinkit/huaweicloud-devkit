@@ -500,6 +500,21 @@ test('tools.mjs resolves skills from the hermes directory', () => {
   assert.match(tools, /hermesSkillsDir\(\)/);
 });
 
+test('tools.mjs resolves skills from the atomcode directory', () => {
+  const tools = readFileSync(join(pluginRoot, 'src', 'tools.mjs'), 'utf8');
+  assert.match(tools, /function atomcodeSkillsDir\(\)/);
+  assert.match(tools, /process\.env\.ATOMCODE_HOME/);
+  assert.match(tools, /return join\(home, '\.atomcode', 'skills'\)/);
+  assert.match(tools, /atomcodeSkillsDir\(\)/);
+});
+
+test('agent-registration reports openclaw registration status', () => {
+  const registration = readFileSync(join(pluginRoot, 'src', 'auth', 'agent-registration.mjs'), 'utf8');
+  assert.match(registration, /function openclawRegistered\(\)/);
+  assert.match(registration, /agent === 'openclaw'/);
+  assert.match(registration, /'\.agents', 'huaweicloud-plugins', '\.mcp\.json'/);
+});
+
 test('official Huawei Cloud Icons library is integrated', () => {
   const tools = readFileSync(join(pluginRoot, 'src', 'tools.mjs'), 'utf8');
   assert.match(tools, /name: 'huaweicloud_get_service_icon'/);

@@ -186,6 +186,11 @@ function atomcodeRegistered() {
   return Boolean(cfg?.mcpServers?.['huaweicloud-devkit']);
 }
 
+function openclawRegistered() {
+  const cfg = readJsonSafe(join(baseHome(), '.agents', 'huaweicloud-plugins', '.mcp.json'));
+  return Boolean(cfg?.mcpServers?.['huaweicloud-devkit']);
+}
+
 function hermesHome() {
   if (process.env.HERMES_HOME) return process.env.HERMES_HOME;
   // Hermes on Windows stores under LOCALAPPDATA, not ~/.hermes
@@ -220,6 +225,7 @@ export function getAgentRegistrationStatuses(target = 'all') {
     if (agent === 'dsh') configured = dshRegistered();
     if (agent === 'officeace') configured = officeaceRegistered();
     if (agent === 'hermes') configured = hermesRegistered();
+    if (agent === 'openclaw') configured = openclawRegistered();
     if (agent === 'atomcode') configured = atomcodeRegistered();
     result.agents[agent] = { configured };
   }

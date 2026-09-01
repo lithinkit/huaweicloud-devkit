@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.1.0-next.21 (2026-09-01)
+
+- fix(sandbox): auto-detect cross-platform from project files for QR check
+- fix(sandbox): restrict QR auto-generation to cross-platform projects only
+- docs: add beta badge to README (#428)
+- fix(sandbox): always auto-generate QR code regardless of frameworkType
+
+## 1.1.0-next.20 (2026-09-01)
+
+- fix(sandbox): auto-generate QR code in deploy_check for cross-platform projects
+- feat(cli): replace string matching with token-based plan-run approval (#421)
+
+## 1.1.0-next.19 (2026-09-01)
+
+- feat(cli): save large hcloud output to file and return path (#416)
+- fix(sandbox): always run QR code check in deploy_check regardless of frameworkType
+- fix(rds): correct ARM volume type from ULTRAHIGH to CLOUDSSD (#5) (#417)
+- fix(safety): add STS credential exposure warning rule (#10) (#418)
+- fix(safety): add rule to warn on all Delete/Detach/Remove cloud operations (#413)
+- fix(auth): sync KooCLI hcloud config on auth sync (#411)
+- fix: remove UTF-8 BOM from files
+- fix: remove UTF-8 BOM from files
+- style: prettier format fix
+- style: prettier format fix
+- feat: add HC activity ECS+Nginx deployment workflow reference doc
+- feat: add HC activity ECS+Nginx deployment workflow to huawei-ecs skill
+- style: prettier reformat huawei-vpc SKILL.md tables (#394)
+- fix(vpc): correct subnet DNS addresses per region (#394)
+
 ## 1.1.0-next.18 (2026-09-01)
 
 - docs(sandbox): fix source parameter value typos (#376)

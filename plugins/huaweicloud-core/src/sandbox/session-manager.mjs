@@ -944,7 +944,33 @@ if [ -f "${outputPath}/qr.png" ]; then
   echo "qr_code:PASS"
   PASS=$((PASS+1))
 else
-  echo "qr_code:FAIL (no QR code — generate one for cross-platform H5 apps)"
+  # Auto-detect cross-platform from project files (more reliable than frameworkType param)
+  PROJ_DIR="/workspace/${project}"
+  IS_CROSS=0
+  if [ -f "$PROJ_DIR/manifest.json" ] || grep -qE '"@tarojs/taro"|"@dcloudio/uni-app"' "$PROJ_DIR/package.json" 2>/dev/null; then
+    IS_CROSS=1
+  fi
+  if [ $IS_CROSS -eq 0 ] && ( [ -f "$PROJ_DIR/app.config.ts" ] || [ -f "$PROJ_DIR/app.config.js" ] ) && grep -qE "pages|tabBar" "$PROJ_DIR/app.config."* 2>/dev/null; then
+    IS_CROSS=1
+  fi
+
+  if [ $IS_CROSS -eq 1 ]; then
+    if [ -n "$TUNNEL_URL" ]; then
+      curl -s "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$TUNNEL_URL" 2>/dev/null)" -o "${outputPath}/qr.png" 2>/dev/null
+      chmod o+r "${outputPath}/qr.png" 2>/dev/null || true
+      if [ -f "${outputPath}/qr.png" ] && [ -s "${outputPath}/qr.png" ]; then
+        echo "qr_code:PASS (auto-generated)"
+        PASS=$((PASS+1))
+      else
+        echo "qr_code:FAIL (QR generation failed)"
+      fi
+    else
+      echo "qr_code:FAIL (no tunnel URL for QR generation)"
+    fi
+  else
+    echo "qr_code:SKIP (not a cross-platform project)"
+    TOTAL=$((TOTAL-1))
+  fi
 fi
 `}`,
     `echo "SCORE:\${PASS}/\${TOTAL}"`,
