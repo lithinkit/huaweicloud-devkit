@@ -1133,9 +1133,7 @@ function uninstallCodexDesktop() {
 
 function registerCodeartsMcp(configPath) {
   const mcpPath = join(codeartsPluginsDir(), 'src', 'mcp-server.mjs').replace(/\\/g, '/');
-  const env = { HUAWEICLOUD_AGENT_TOOLKIT_MODE: 'local' };
   const hcloudBin = findHcloudBin();
-  if (hcloudBin) env.HCLOUD_BIN = hcloudBin.replace(/\\/g, '/');
   let config = {};
   if (existsSync(configPath)) {
     try {
@@ -1154,11 +1152,30 @@ function registerCodeartsMcp(configPath) {
       existing.args[0] === mcpPath &&
       existing.timeout === 300000
     ) {
-      console.log(`  MCP config unchanged: ${configPath}`);
+      let changed = false;
+      if (!existing.env) { existing.env = {}; changed = true; }
+      if (!existing.env.HUAWEICLOUD_AGENT_TOOLKIT_MODE) {
+        existing.env.HUAWEICLOUD_AGENT_TOOLKIT_MODE = 'local';
+        changed = true;
+      }
+      if (hcloudBin && !existing.env.HCLOUD_BIN) {
+        existing.env.HCLOUD_BIN = hcloudBin.replace(/\\/g, '/');
+        changed = true;
+      }
+      if (existing.enabled !== true) { existing.enabled = true; changed = true; }
+      if (changed) {
+        mkdirSync(dirname(configPath), { recursive: true });
+        writeFileSync(configPath, JSON.stringify(config, null, 2));
+        console.log(`  MCP config refreshed: ${configPath}`);
+      } else {
+        console.log(`  MCP config unchanged: ${configPath}`);
+      }
       return;
     }
   }
   config.mcpServers = config.mcpServers || {};
+  const env = { HUAWEICLOUD_AGENT_TOOLKIT_MODE: 'local' };
+  if (hcloudBin) env.HCLOUD_BIN = hcloudBin.replace(/\\/g, '/');
   config.mcpServers['huaweicloud-devkit'] = {
     command: 'node',
     args: [mcpPath],
