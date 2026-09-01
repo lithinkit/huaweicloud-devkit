@@ -1208,7 +1208,8 @@ async function installCodeArts() {
   const codeartsHookDir = join(homedir(), '.codeartsdoer', 'plugins');
   mkdirSync(codeartsHookDir, { recursive: true });
   copyFileSync(pluginSrc, join(codeartsHookDir, 'skill-tracker.js'));
-
+  const wrapperSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker-codeartscli.js');
+  copyFileSync(wrapperSrc, join(codeartsHookDir, 'skill-tracker-codeartscli.js'));
   console.log(`  Plugin -> ${codeartsHookDir}`);
 
   registerCodeartsMcp(codeartsMcpSettingsFile());
@@ -1237,7 +1238,8 @@ async function updateCodeArts() {
   const codeartsHookDir = join(homedir(), '.codeartsdoer', 'plugins');
   mkdirSync(codeartsHookDir, { recursive: true });
   copyFileSync(pluginSrc, join(codeartsHookDir, 'skill-tracker.js'));
-
+  const wrapperSrc = join(PACKAGE_ROOT, 'integrations', 'opencode', 'hooks', 'skill-tracker-codeartscli.js');
+  copyFileSync(wrapperSrc, join(codeartsHookDir, 'skill-tracker-codeartscli.js'));
   console.log(`  Plugin updated -> ${codeartsHookDir}`);
 
   registerCodeartsMcp(codeartsMcpSettingsFile());
@@ -1261,9 +1263,14 @@ function uninstallCodeArts() {
   if (removed > 0) console.log(`  Removed ${removed} skills`);
 
   const hookFile = join(homedir(), '.codeartsdoer', 'plugins', 'skill-tracker.js');
+  const wrapperFile = join(homedir(), '.codeartsdoer', 'plugins', 'skill-tracker-codeartscli.js');
   if (existsSync(hookFile)) {
     removeIfExists(hookFile);
     console.log('  Removed plugin hook');
+  }
+  if (existsSync(wrapperFile)) {
+    removeIfExists(wrapperFile);
+    console.log('  Removed plugin hook wrapper');
   }
 
   if (removeIfExists(codeartsPluginsDir())) {
