@@ -16,6 +16,8 @@ import {
   closeSession,
   uploadFileWithSession,
   uploadProjectWithSession,
+  deployNginx,
+  deployCheck,
   getCurrentWorkspaceId,
   setWorkspaceId,
 } from './sandbox/session-manager.mjs';
@@ -46,6 +48,10 @@ function opencodeSkillsDir() {
 function codeartsSkillsDir() {
   const home = homedir();
   return join(home, '.codeartsdoer', 'skills');
+}
+function codeartsWorkSkillsDir() {
+  const home = homedir();
+  return join(home, '.codeartswork', 'skills');
 }
 function workbuddySkillsDir() {
   const home = homedir();
@@ -125,6 +131,7 @@ function resolveSkillsRoot() {
       SKILLS_ROOT_DEV,
       dshSkillsDir(),
       codeartsSkillsDir(),
+      codeartsWorkSkillsDir(),
       opencodeSkillsDir(),
       workbuddySkillsDir(),
       officeaceSkillsRoot(),
@@ -448,7 +455,7 @@ export const TOOL_DEFINITIONS = [
         target: {
           type: 'string',
           description:
-            'Agent target to check: opencode, codex, codex-desktop, codearts, workbuddy, dsh, officeace, hermes, openclaw, atomcode, or all (default).',
+            'Agent target to check: opencode, codex, codex-desktop, codearts, codearts-work, workbuddy, dsh, officeace, hermes, openclaw, atomcode, or all (default).',
         },
       },
     },
@@ -463,7 +470,7 @@ export const TOOL_DEFINITIONS = [
         target: {
           type: 'string',
           description:
-            'Agent target to report after sync: opencode, codex, codex-desktop, codearts, workbuddy, dsh, officeace, hermes, or all (default).',
+            'Agent target to report after sync: opencode, codex, codex-desktop, codearts, codearts-work, workbuddy, dsh, officeace, hermes, or all (default).',
         },
       },
     },
@@ -551,7 +558,7 @@ export const TOOL_DEFINITIONS = [
             'Workspace ID from huaweicloud_sandbox_connect return value. Required - must be passed explicitly when HW_WORKSPACE_ID is not set.',
         },
         username: { type: 'string', description: 'Login username (default: root)' },
-        timeout_ms: { type: 'number', description: 'Per-command execution timeout in milliseconds (default: 120000)' },
+        timeout_ms: { type: 'number', description: 'Execution timeout in milliseconds (default: 60000)' },
       },
     },
   },
@@ -585,6 +592,72 @@ export const TOOL_DEFINITIONS = [
           description: 'Extract tar.gz on sandbox after upload (default: true)',
         },
         timeout_ms: { type: 'number', description: 'Execution timeout in milliseconds (default: 300000)' },
+      },
+    },
+  },
+  {
+    name: 'huaweicloud_sandbox_deploy_nginx',
+    description:
+      'Deploy an nginx configuration on the sandbox and reload. Takes nginxType, port, project, outputDir from framework detection and writes the correct template (SPA try_files, SSR reverse proxy, or static). Also fixes directory traverse permissions on the project path. Use this instead of manually constructing nginx config — it handles permissions, template selection, and reload in one call.',
+    inputSchema: {
+      type: 'object',
+      required: ['nginx_type', 'port', 'project', 'output_dir'],
+      properties: {
+        nginx_type: {
+          type: 'string',
+          description:
+            'Nginx config type from framework detection: spa (try_files fallback for SPA/SSG/cross-platform), proxy (reverse proxy for SSR), or static (plain root for Hugo/Hexo).',
+          enum: ['spa', 'proxy', 'static'],
+        },
+        port: { type: 'number', description: 'Listen port (from framework detection).' },
+        project: { type: 'string', description: 'Project directory name under /workspace, e.g. movie-ticket.' },
+        output_dir: {
+          type: 'string',
+          description: 'Build output directory relative to /workspace/<project>, e.g. dist/build/h5.',
+        },
+        node_port: { type: 'number', description: 'Node.js app port for SSR (required when nginx_type=proxy).' },
+        public_port: { type: 'number', description: 'Public listen port for SSR proxy (optional, defaults to port).' },
+        config_name: {
+          type: 'string',
+          description:
+            'Config file name (without .conf suffix). Defaults to the project name, ensuring each project gets its own config. Override with distinct names (e.g. admin, docs) for sub-app deployments.',
+        },
+        workspace_id: {
+          type: 'string',
+          description:
+            'Workspace ID from huaweicloud_sandbox_connect return value. Required - must be passed explicitly when HW_WORKSPACE_ID is not set.',
+        },
+        username: { type: 'string', description: 'Login username (default: root)' },
+        timeout_ms: { type: 'number', description: 'Execution timeout in milliseconds (default: 30000)' },
+      },
+    },
+  },
+  {
+    name: 'huaweicloud_sandbox_deploy_check',
+    description:
+      'Run a deployment completeness check on the sandbox. Verifies nginx is serving, output directory exists, DevBridge tunnel is active and accessible, and QR code exists (cross-platform). Returns a score and nextStep to fix any missing items. Call this at the end of a deployment workflow to confirm everything is working before reporting success.',
+    inputSchema: {
+      type: 'object',
+      required: ['port', 'project', 'output_dir'],
+      properties: {
+        port: { type: 'number', description: 'App listen port (from framework detection).' },
+        project: { type: 'string', description: 'Project directory name under /workspace.' },
+        output_dir: {
+          type: 'string',
+          description: 'Build output directory relative to /workspace/<project>, e.g. dist/build/h5.',
+        },
+        framework_type: {
+          type: 'string',
+          description: 'Framework type from detect_framework. Set to cross-platform for QR code check.',
+          enum: ['spa', 'ssr', 'ssg', 'cross-platform', 'monorepo', 'static'],
+        },
+        workspace_id: {
+          type: 'string',
+          description:
+            'Workspace ID from huaweicloud_sandbox_connect return value. Required - must be passed explicitly when HW_WORKSPACE_ID is not set.',
+        },
+        username: { type: 'string', description: 'Login username (default: root)' },
+        timeout_ms: { type: 'number', description: 'Execution timeout in milliseconds (default: 30000)' },
       },
     },
   },
@@ -850,6 +923,59 @@ export async function callTool(name, args = {}) {
         },
       );
     }
+    case 'huaweicloud_sandbox_deploy_nginx': {
+      if (!args.nginx_type || !args.port || !args.project || !args.output_dir) {
+        throw new Error('nginx_type, port, project, and output_dir are required.');
+      }
+      const sandboxWsId7 = args.workspace_id || getCurrentWorkspaceId();
+      if (!sandboxWsId7) {
+        throw new Error(
+          'workspace_id is required. No sandbox connected — call huaweicloud_sandbox_connect first, ' +
+            'or set HW_WORKSPACE_ID environment variable before starting the agent.',
+        );
+      }
+      const sandboxUser7 = args.username || 'root';
+      const sandboxTimeout7 = args.timeout_ms || 60000;
+      return await deployNginx(
+        sandboxWsId7,
+        {
+          nginxType: args.nginx_type,
+          port: args.port,
+          project: args.project,
+          outputDir: args.output_dir,
+          nodePort: args.node_port,
+          publicPort: args.public_port,
+          configName: args.config_name,
+        },
+        sandboxUser7,
+        sandboxTimeout7,
+      );
+    }
+    case 'huaweicloud_sandbox_deploy_check': {
+      if (!args.port || !args.project || !args.output_dir) {
+        throw new Error('port, project, and output_dir are required.');
+      }
+      const sandboxWsId8 = args.workspace_id || getCurrentWorkspaceId();
+      if (!sandboxWsId8) {
+        throw new Error(
+          'workspace_id is required. No sandbox connected — call huaweicloud_sandbox_connect first, ' +
+            'or set HW_WORKSPACE_ID environment variable before starting the agent.',
+        );
+      }
+      const sandboxUser8 = args.username || 'root';
+      const sandboxTimeout8 = args.timeout_ms || 30000;
+      return await deployCheck(
+        sandboxWsId8,
+        {
+          port: args.port,
+          project: args.project,
+          outputDir: args.output_dir,
+          frameworkType: args.framework_type,
+        },
+        sandboxUser8,
+        sandboxTimeout8,
+      );
+    }
     case 'huaweicloud_sandbox_check_user':
       return await hdkitCheckUser();
     case 'huaweicloud_sandbox_sign_agreement':
@@ -866,7 +992,8 @@ export async function callTool(name, args = {}) {
       return connectResult;
     }
     case 'huaweicloud_sandbox_credentials': {
-      const credResult = await hdkitCredentials(args.session_id, args.dev_stage_id, args.enable_sts !== false);
+      const devStageId = args.dev_stage_id || getCurrentWorkspaceId();
+      const credResult = await hdkitCredentials(args.session_id, devStageId, args.enable_sts !== false);
       const sandboxWsIdCred = args.dev_stage_id || getCurrentWorkspaceId();
       if (sandboxWsIdCred) {
         try {

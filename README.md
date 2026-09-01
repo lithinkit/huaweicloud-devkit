@@ -8,7 +8,7 @@
 
 Help AI coding agents use Huawei Cloud safely and accurately — a single integration that gives agents cloud knowledge, CLI tooling, and safety guardrails.
 
-Supports OpenCode, CodeArts Agent, WorkBuddy, DeepSeek Harness (DSH), OfficeAce, Hermes, OpenClaw, and AtomCode.
+Supports OpenCode, Codex, CodeArts Agent, WorkBuddy, DeepSeek Harness (DSH), OfficeAce, Hermes, OpenClaw, and AtomCode.
 
 ## Prerequisites
 
@@ -34,6 +34,23 @@ npx --yes huaweicloud-devkit uninstall --target opencode
 rm -rf ~/.npm/_npx/  # Linux/macOS only; Windows path TBD
 ```
 
+### Codex
+
+```bash
+npx --yes huaweicloud-devkit install --target codex
+```
+
+**Restart the Codex session** after installation.
+
+```bash
+npx --yes huaweicloud-devkit doctor --target codex
+npx --yes huaweicloud-devkit status --target codex
+npx --yes huaweicloud-devkit update --target codex
+npx --yes huaweicloud-devkit uninstall --target codex
+```
+
+> **Requires Codex CLI** — the `codex` command must be in PATH. If Codex is installed via WindowsApps (Microsoft Store), use `--target codex-desktop` instead. Run `codex --version` to verify CLI availability.
+
 ### CodeArts Agent
 
 ```bash
@@ -50,6 +67,23 @@ npx --yes huaweicloud-devkit uninstall --target codearts
 ```
 
 > **Sandbox mode**: CodeArts defaults to sandbox mode which blocks KooCLI. `install-hcloud` detects this and shows how to resolve it — install KooCLI outside the sandbox terminal, or disable sandbox mode in CodeArts settings (Settings → Chats → Agents Terminal Command Running Mode → Auto Running).
+
+### CodeArts Work
+
+```bash
+npx --yes huaweicloud-devkit install --target codearts-work
+```
+
+**Restart the session** after installation.
+
+```bash
+npx --yes huaweicloud-devkit doctor --target codearts-work
+npx --yes huaweicloud-devkit status --target codearts-work
+npx --yes huaweicloud-devkit update --target codearts-work
+npx --yes huaweicloud-devkit uninstall --target codearts-work
+```
+
+> **CodeArts Work** (CodeArts Space, appId: `com.codearts.work`) uses user-level config at `%USERPROFILE%\.codeartswork\`. No project-level `.codeartswork` directory is created.
 
 ### WorkBuddy
 
@@ -116,7 +150,7 @@ npx --yes huaweicloud-devkit uninstall --target hermes
 > **Uninstall notes**: On Linux, run `rm -rf ~/.npm/_npx/* && npm cache clean --force` after uninstall to ensure a clean slate. On Windows, close all Hermes sessions first to release file locks, then after uninstall check `%LOCALAPPDATA%\hermes\config.yaml` for YAML corruption and manually remove `%LOCALAPPDATA%\hermes\huaweicloud-plugins` if any files remain.
 > **Safety hooks**: The installer configures Hermes shell hooks (`config.yaml` → `hooks.pre_tool_call`) to intercept unsafe terminal commands such as credential file reads, environment variable dumps, and unapproved `hcloud` write operations. Hermes shows a consent prompt the first time; approve it or set `hooks_auto_accept: true` in `config.yaml` to auto-accept.
 > **MCP Python SDK**: The installer automatically installs the `mcp` Python package required by Hermes for MCP tool discovery. If you see `[FAIL] Hermes MCP Python SDK` in `doctor`, run `pip3 install mcp` manually.
-> **Windows**: Hermes on Windows stores data under `%LOCALAPPDATA%\hermes` instead of `~/.hermes`. The installer detects this automatically.
+> **Windows**: See [docs/hermes-windows.md](docs/hermes-windows.md) for known issues and workarounds.
 
 ### OpenClaw
 

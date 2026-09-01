@@ -1,4 +1,7 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 import { classifyHcloudArgs, redactSecrets, assertAllowed } from './safety-policy.mjs';
 import { getProxySettings } from './proxy/proxy-config.mjs';
@@ -53,10 +56,19 @@ export async function runHcloud(args, options = {}) {
   throw new Error('Unreachable retry state.');
 }
 
+function discoverHcloudPath() {
+  if (process.env.HCLOUD_BIN && existsSync(process.env.HCLOUD_BIN)) return process.env.HCLOUD_BIN;
+  const candidates =
+    process.platform === 'win32'
+      ? [join(homedir(), 'hcloud', 'hcloud.exe')]
+      : [join(homedir(), '.local', 'bin', 'hcloud'), join(homedir(), 'hcloud', 'hcloud')];
+  return candidates.find((c) => existsSync(c)) || null;
+}
+
 function runHcloudOnce(plan, options) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const forceKillAfterMs = options.forceKillAfterMs ?? DEFAULT_FORCE_KILL_AFTER_MS;
-  const executable = options.executable || options.env?.HCLOUD_BIN || process.env.HCLOUD_BIN || 'hcloud';
+  const executable = options.executable || options.env?.HCLOUD_BIN || discoverHcloudPath() || 'hcloud';
   const executableArgs = Array.isArray(options.executableArgs) ? options.executableArgs.map(String) : [];
   const cwd = options.cwd || undefined;
 

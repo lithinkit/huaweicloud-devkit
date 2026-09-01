@@ -95,15 +95,10 @@ Setup is a **plugin-side preflight** — the developer should be asked a questio
 2. **Real-name verification only** (`HDKIT_NOT_REALNAME`): tell the developer once, "Huawei Cloud requires real-name verification before using the sandbox — please complete it in the Huawei Cloud console (实名认证)." and stop — do not retry `connect` in a loop
 3. **Sign agreement only** (`HDKIT_NOT_AGREEMENT`): **STOP and do NOT sign on your own.** Ask the developer: "Huawei Cloud sandbox requires signing the latest developer service agreement. May I sign it for you?" Then **wait for the developer to explicitly agree** (e.g. "签署" / "确认" / "sign it"). Only after explicit consent call `huaweicloud_sandbox_sign_agreement` and return its result (`signed`/`signedCount`) to the developer. **Never sign a legal agreement on the developer's behalf without their explicit, unambiguous consent.** Do not expose the underlying sandbox/DevBridge service as a separate entity the developer must understand or sign up for
 4. **Both missing** (`HDKIT_NOT_REALNAME_AND_AGREEMENT`): present **both** requirements together in one message — the real-name verification steps (console, step 2) **and** the agreement-signing request (step 3, wait for explicit consent) — so the developer can complete both at once
-5. **Connect**: `huaweicloud_sandbox_connect` — returns `session_id`, `dev_stage_id`, `connection_id`, `connection_address`. The `source` parameter identifies the calling agent (valid values: `'CLI'`, `'WEb'`, `'VSCODE'`, `'CURSO'`, `'WEBIDE'`, etc. — case-sensitive). The `git` parameter (with `repo_url`, `repo_name`, `target_path`) is accepted but does NOT auto-clone the repository — always clone manually.
-6. **Cleanup previous deployments** (after first connect to a sandbox): nginx configs, DevBridge tunnels, and stale web processes from previous deployments can cause port conflicts and quota errors. Run cleanup immediately after connect:
+5. **Connect**: `huaweicloud_sandbox_connect` — returns `session_id`, `dev_stage_id`, `connection_id`, `connection_address`
+6. **Cleanup previous deployments** (after first connect to a sandbox): nginx configs and DevBridge tunnels from previous deployments can cause port conflicts and quota errors. Run cleanup immediately after connect:
 
    ```bash
-   # Kill stale Node.js web processes from previous deployments
-   pkill -9 -f "next-server" 2>/dev/null || true
-   pkill -9 -f "next start" 2>/dev/null || true
-   pkill -9 -f "nuxt" 2>/dev/null || true
-   sleep 1
    # Remove stale nginx configs from previous deployments
    sudo rm -f /etc/nginx/conf.d/*.conf /etc/nginx/conf.d/*.conf.bak 2>/dev/null
    # Remove stale DevBridge tunnels
@@ -207,7 +202,7 @@ fi
 export PATH=$PATH:$HOME/.huawei/bin   # installer only writes ~/.bashrc; session shells do not re-source it
 ```
 
-**Login** (non-interactive; credentials from `huaweicloud_sandbox_credentials` are available via `/tmp/hw_creds.sh`). If `source /tmp/hw_creds.sh` returns empty, the credentials injection has expired (sandbox session reconnection resets them) — re-run `huaweicloud_sandbox_credentials` first:
+**Login** (non-interactive; credentials injected by `huaweicloud_sandbox_credentials` are available at `/tmp/hw_creds.sh`):
 
 ```bash
 source /tmp/hw_creds.sh 2>/dev/null
@@ -354,16 +349,6 @@ if command -v apt-get >/dev/null 2>&1; then echo "PKG_MGR=apt"; elif command -v 
 
 Use the detected `PKG_MGR` for all package installations below.
 
-**Architecture awareness**: the sandbox runs Linux aarch64 (ARM64). Native binaries built on x64 (Windows/macOS Intel) will not execute. Always install dependencies and build inside the sandbox. For projects with native addons (Taro `@swc/core`, Prisma, `esbuild`, `node-gyp`), local x64 pre-build + upload of `dist/` output is a viable alternative when sandbox builds fail.
-
-**GitCode SSL**: if `git clone` from GitCode fails with SSL certificate errors:
-
-```bash
-git config --global http.sslVerify false
-```
-
-Then retry the clone. This is a known sandbox environment limitation.
-
 #### 3b: Install nginx (before project upload)
 
 ```bash
@@ -437,15 +422,6 @@ echo "NODE_ENV=${NODE_ENV:-development}"
 
 This must run via `exec_with_session` so the exported variables persist for subsequent build commands in the same session.
 
-**Prisma / ORM compatibility**: Prisma CLI (`prisma generate`, `prisma db push`, `prisma migrate`) only reads `.env` by default, NOT `.env.local` or `.env.development`. If the project uses `.env.local` for `DATABASE_URL`, link it before any Prisma command:
-
-```bash
-# Prisma requires .env (not .env.local) — symlink if needed
-if [ -f .env.local ] && [ ! -f .env ]; then ln -sf .env.local .env 2>/dev/null || cp .env.local .env; fi
-# Then re-source
-set -a && source .env 2>/dev/null; set +a
-```
-
 #### 4b: Install Dependencies
 
 Use `exec_one_shot` for install (no shared state needed). Skip if `node_modules` already exists:
@@ -467,18 +443,6 @@ Node v24+ uses musl-based binaries on some sandbox images, which may break nativ
 - Try `npm install --force` or `npm install --legacy-peer-deps`
 - For rollup 4 projects, consider `npm install rollup@3` as fallback
 - If webpack/rollup native addon errors persist, add `--ignore-scripts` then manually rebuild: `npm rebuild`
-
-**Prisma / database initialization**: if `prisma/schema.prisma` exists in the project, initialize the database after install and before build. Prisma Client generation (`prisma generate`) is usually handled by `postinstall`, but `prisma db push` (SQLite) or `prisma migrate deploy` (PostgreSQL/MySQL) must be run manually:
-
-```bash
-cd /workspace/<dirname>
-if [ -f prisma/schema.prisma ]; then
-  echo "Prisma schema detected — initializing database..."
-  npx prisma db push --skip-generate 2>/dev/null || npx prisma migrate deploy 2>/dev/null || echo "WARN: skip db init"
-fi
-```
-
-> `--skip-generate` avoids redundant generation when `postinstall` already ran `prisma generate`. For SQLite, `DATABASE_URL="file:./dev.db"` must be set in `.env`/`.env.local` before this step.
 
 #### 4c: Build
 
@@ -623,17 +587,6 @@ chmod -R +x "$REAL_ROOT/node_modules/.bin" 2>/dev/null || true
 
 This prevents the most common deployment failure: nginx 500 with `stat() ... Permission denied` caused by missing `o+x` on intermediate directories.
 
-#### 4e: Write Deployment Fingerprint
-
-After a successful build, write a deployment fingerprint into the output directory. This enables `deploy_check` to verify the nginx-served content belongs to the current deployment (not a stale process from an earlier session):
-
-```bash
-echo "deployed-$(date +%s)-<dirname>" > /workspace/<dirname>/<outputDir>/.deploy_fingerprint
-chmod o+r /workspace/<dirname>/<outputDir>/.deploy_fingerprint 2>/dev/null || true
-```
-
-> For SSR proxy type, nginx does not serve static files from `.next` — the fingerprint check will gracefully SKIP in `deploy_check`. The fingerprint is still written as a deployment marker for debugging.
-
 ### Step 5: Port Availability Check
 
 **Before configuring nginx or starting the app**, verify the target ports are free. Port conflicts from previous deployments cause silent failures:
@@ -701,7 +654,7 @@ Use `huaweicloud_sandbox_deploy_nginx` to write the correct template, fix direct
 - `port` — listen port from framework detection
 - `project` — project dir name under `/workspace`
 - `output_dir` — build output dir relative to `/workspace/<project>`
-- `node_port` — Node.js app port for SSR proxy. Defaults to `<port> + 1` if omitted, and the result includes `nodePort` so you know which port to bind the Node process to.
+- `node_port` — Node.js app port (required only when `nginx_type=proxy`)
 - `public_port` — public listen port for SSR proxy (optional, defaults to `port`)
 
 The tool automatically handles:
@@ -729,21 +682,7 @@ If the status code is not 2xx/3xx:
 ### Step 6: Start the App [REQUIRED]
 
 - **Static (SPA/SSG/cross-platform)**: nginx is already serving. Skip.
-- **SSR**: `PORT=<nodePort>` prefix is REQUIRED before `<serveCmd>`. nginx `proxy_pass` targets `<nodePort>`, not `<port>` — the two must differ. `deployNginx` returns `nodePort` in its result (defaults to `<port> + 1` for proxy type).
-
-  **Runtime environment variables**: SSR apps often need `DATABASE_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, etc. at runtime. Before starting, verify env vars from Step 4a are still loaded, and re-source `.env` if the shell session was reset:
-
-  ```bash
-  cd /workspace/<dirname>
-  # Re-load env vars (SSR apps need them at runtime, not just build time)
-  if [ -f .env ]; then set -a && source .env 2>/dev/null; set +a; echo "Loaded .env"; fi
-  if [ -f .env.local ]; then set -a && source .env.local 2>/dev/null; set +a; echo "Loaded .env.local"; fi
-  # Verify critical vars
-  echo "DATABASE_URL=${DATABASE_URL:-<NOT SET>}"
-  echo "NEXTAUTH_URL=${NEXTAUTH_URL:-<NOT SET>}"
-  ```
-
-  Then start with `PORT=<nodePort> <serveCmd>` via `exec_with_session` to run the Node process in background.
+- **SSR**: run `<serveCmd>` via `exec_with_session` to start the Node process in background.
 
 ### Step 7: Expose via DevBridge [REQUIRED — deployment incomplete without this]
 
@@ -832,8 +771,6 @@ Returns `complete: true/false`, `score`, and `nextStep` to fix missing items.
 | Call deploy_check before success     | Always call `huaweicloud_sandbox_deploy_check` before reporting deployment success. A green nginx status does not mean the tunnel is accessible — verify end-to-end with the tool.                                                      |
 | Session state persists               | `exec_with_session` preserves `cd`, env vars, aliases between calls                                                                                                                                                                     |
 | Long commands prefer one-shot        | `exec_one_shot` creates a fresh connection per call — more stable for builds, installs, and scripts >30s. See [Tool Selection Guide](#tool-selection-guide).                                                                            |
-| SSR nginx/Node ports must differ     | nginx `proxy_pass` targets `<nodePort>`, not `<port>`. `deploy_nginx` auto-defaults `nodePort` to `<port>+1` — always start the Node process with `PORT=<nodePort>` to match. Same-port = EADDRINUSE.                                   |
-| HTTP 200 ≠ correct content           | A green HTTP check does not guarantee the right project is serving — old processes from a previous session bound to the same port will still return 200. `deploy_check` verifies the deployment fingerprint to catch this.              |
 | Destructive commands blocked         | `rm -rf /`, `mkfs`, `dd if=`, fork bombs are denied by safety policy                                                                                                                                                                    |
 | Workspace ID = dev_stage_id          | Use `dev_stage_id` from `sandbox_connect` as `workspace_id` for terminal exec                                                                                                                                                           |
 | Projects live in `/workspace`        | Clone/install project code under `/workspace/<repo-name>` (filesystem-root workspace mount, not `$HOME/workspace`), never in `/tmp` — ephemeral locations lose the project when the sandbox session restarts                            |

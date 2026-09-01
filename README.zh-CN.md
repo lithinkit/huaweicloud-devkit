@@ -8,7 +8,7 @@
 
 帮助 AI 编码助手安全、准确地使用华为云——一站式集成云知识、CLI 工具和安全护栏。
 
-支持 OpenCode、码道（CodeArts Agent）、WorkBuddy、DeepSeek Harness（DSH）、OfficeAce、Hermes、OpenClaw、AtomCode。
+支持 OpenCode、Codex、码道（CodeArts Agent）、WorkBuddy、DeepSeek Harness（DSH）、OfficeAce、Hermes、OpenClaw、AtomCode。
 
 ## 前置条件
 
@@ -34,6 +34,23 @@ npx --yes huaweicloud-devkit uninstall --target opencode
 rm -rf ~/.npm/_npx/  # 仅 Linux/macOS；Windows 路径待确认
 ```
 
+### Codex
+
+```bash
+npx --yes huaweicloud-devkit install --target codex
+```
+
+安装后**重启 Codex 会话**。
+
+```bash
+npx --yes huaweicloud-devkit doctor --target codex
+npx --yes huaweicloud-devkit status --target codex
+npx --yes huaweicloud-devkit update --target codex
+npx --yes huaweicloud-devkit uninstall --target codex
+```
+
+> **需要 Codex CLI** — `codex` 命令必须在 PATH 中。若 Codex 通过 WindowsApps（Microsoft Store）安装，请使用 `--target codex-desktop` 替代。运行 `codex --version` 验证 CLI 可用性。
+
 ### CodeArts Agent（码道）
 
 ```bash
@@ -50,6 +67,23 @@ npx --yes huaweicloud-devkit uninstall --target codearts
 ```
 
 > **沙箱模式**：码道默认沙箱模式会阻止 KooCLI 运行。`install-hcloud` 自动检测并给出指引——请在码道外终端安装使用 KooCLI，或在码道设置中关闭沙箱模式（设置 → 对话流 → 智能体 终端命令运行模式 → 自动运行）。
+
+### CodeArts Work（码道工作空间）
+
+```bash
+npx --yes huaweicloud-devkit install --target codearts-work
+```
+
+安装后**重启会话**。
+
+```bash
+npx --yes huaweicloud-devkit doctor --target codearts-work
+npx --yes huaweicloud-devkit status --target codearts-work
+npx --yes huaweicloud-devkit update --target codearts-work
+npx --yes huaweicloud-devkit uninstall --target codearts-work
+```
+
+> **CodeArts Work**（工作空间，appId: `com.codearts.work`）使用用户级配置 `%USERPROFILE%\.codeartswork\`，不创建项目级目录。
 
 ### WorkBuddy
 
@@ -116,7 +150,7 @@ npx --yes huaweicloud-devkit uninstall --target hermes
 > **卸载说明**：Linux 上卸载后执行 `rm -rf ~/.npm/_npx/* && npm cache clean --force` 确保下次全新安装。Windows 上先关闭所有 Hermes 会话（释放文件锁），卸载后检查 `%LOCALAPPDATA%\hermes\config.yaml` 是否有 YAML 损坏，如有残留文件手动删除 `%LOCALAPPDATA%\hermes\huaweicloud-plugins`。
 > **安全钩子（Safety hooks）**：安装器会在 `config.yaml` 中写入 shell hooks 配置（`hooks.pre_tool_call`），拦截不安全的终端命令，如读取凭据文件、导出环境变量、未审批的 `hcloud` 写操作。Hermes 首次使用时会弹出同意提示，可批准或设置 `hooks_auto_accept: true` 自动批准。
 > **MCP Python SDK**：安装器会自动安装 Hermes 所需的 `mcp` Python 包。如果 doctor 显示 `[FAIL] Hermes MCP Python SDK`，手动执行 `pip3 install mcp`。
-> **Windows**：Hermes 在 Windows 上数据存储在 `%LOCALAPPDATA%\hermes` 而非 `~/.hermes`，安装器会自动检测适配。
+> **Windows**：参见 [docs/hermes-windows.md](docs/hermes-windows.md) 了解已知问题和解决方法。
 
 ### OpenClaw
 

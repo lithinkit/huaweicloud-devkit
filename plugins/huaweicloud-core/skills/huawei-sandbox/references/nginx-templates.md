@@ -42,6 +42,7 @@ sudo tee /etc/nginx/conf.d/app.conf > /dev/null << 'NGINX_EOF'
 server {
     listen <publicPort>;
     server_name _;
+    large_client_header_buffers 4 32k;
 
     location / {
         proxy_pass http://127.0.0.1:<nodePort>;
@@ -54,6 +55,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
     }
 }
 NGINX_EOF

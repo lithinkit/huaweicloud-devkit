@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.1.0-next.15 (2026-08-31)
+
+- feat: add codearts-work (CodeArts Space) agent target support (#387)
+- fix(sandbox): default deploy_nginx config_name from 'app' to project name
+
+## 1.1.0-next.14 (2026-08-31)
+
+- test: update hdkitservice error message assertion to match new format
+- fix: deploy_nginx auto-assign free port + SSR runtime env var injection
+- fix: port conflict detection in deploy_nginx + SKILL.md docs
+- fix(hdkitservice): improve credential and error diagnostics
+- fix: batch fixes for deploy issues #15 #16 #5 #2 #22 #23
+- fix(hcloud): add runtime path discovery for hcloud binary
+- fix(sandbox): graceful nginx restart with orphan worker recovery
+- fix(sandbox): move large_client_header_buffers to server level, harden port equality guard, add credential dev_stage_id fallback
+- style: apply Prettier formatting
+- fix(sandbox): prevent port conflicts, stale content, and header buffer errors in SSR deployments
+
+## 1.1.0-next.13 (2026-08-31)
+
+- fix: scope MCP keepalive to after stdin close only (#361)
+
+## 1.1.0-next.12 (2026-08-31)
+
+- fix: correct broken CLI commands in billing/vpc/dew skills (#358)
+- feat: add installCommand to search_marketplace results (#353)
+
+## 1.1.0-next.11 (2026-08-29)
+
+- fix(hermes): fix uninstall order, config.yaml residue, and allowlist cleanup (#343)
+
+## 1.1.0-next.10 (2026-08-29)
+
+- fix: prevent MCP server silent exit on Windows when stdin is closed (#340)
+
+## 1.1.0-next.9 (2026-08-28)
+
+- fix(sandbox): nginx cleanup, try_files, reload, config_name
+- docs: add Codex install section to README
+- fix(sandbox): git archive prefix, symlink resolve, permission hardening
+- fix(sandbox): add build failure response rules to prevent silent auto-fixes
+- feat(sandbox): deploy_check tool, deploy_nginx nextStep, REQUIRED markers
+- style: remove unused escapedConfig variable
+- feat(sandbox): add sandbox_deploy_nginx tool + permission auto-fix
+- fix(sandbox): merge Step 8 QR into Step 7, add deployment completion checklist
+- style: prettier format SKILL.md blank lines
+- fix(sandbox): optimize deploy flow - permissions, credentials, env detection, tunnel cleanup
+- fix(sandbox): pkill devbridge before tunnel creation to prevent zombies
+- fix(sandbox): use git archive for git repos to exclude all untracked/ignored files
+- fix(sandbox): post-build output verification, Node v24 native module guidance
+- fix(sandbox): health-check tunnel URL before returning, auto-retry on failure
+- fix(sandbox): save QR to outputDir for nginx serving, drop ANSI qrencode
+- docs: add Hermes uninstall notes for Linux and Windows
+- style: fix ESLint catch-error-name and prettier
+- chore: bump version to 1.1.0-next.8
+- docs: add Hermes MCP Python SDK note to README
+- fix(hermes): auto-install MCP Python SDK to fix silent tool discovery skip
+
 ## 1.1.0-next.6 (2026-08-27)
 
 - feat: 代金券能力可发现化，新增 huawei-voucher skill 与路由

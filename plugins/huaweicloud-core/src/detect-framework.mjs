@@ -157,10 +157,13 @@ function readPkg(projectPath) {
   }
 }
 
-function detectPackageManager(projectPath) {
+function detectPackageManager(projectPath, pkg) {
   if (existsSync(join(projectPath, 'pnpm-lock.yaml'))) return 'pnpm';
   if (existsSync(join(projectPath, 'yarn.lock'))) return 'yarn';
   if (existsSync(join(projectPath, 'package-lock.json'))) return 'npm';
+  if (existsSync(join(projectPath, 'bun.lockb'))) return 'bun';
+  const declared = (pkg?.packageManager || '').split('@')[0];
+  if (declared && ['pnpm', 'yarn', 'npm', 'bun'].includes(declared)) return declared;
   return 'npm';
 }
 
@@ -234,10 +237,24 @@ function frameworkResult(fw, pm, projectPath) {
   return patchCommands({ ...fw, packageManager: pm, rootDir: projectPath }, pm);
 }
 
+function readVitepressOutDir(projectPath) {
+  const configFiles = ['config.mts', 'config.ts', 'config.mjs', 'config.js'];
+  for (const cf of configFiles) {
+    const configPath = join(projectPath, '.vitepress', cf);
+    if (!existsSync(configPath)) continue;
+    try {
+      const content = readFileSync(configPath, 'utf8');
+      const match = content.match(/outDir\s*:\s*['"]([^'"]+)['"]/);
+      if (match) return match[1];
+    } catch {}
+  }
+  return null;
+}
+
 export function detectFramework(projectPath) {
   const pkg = readPkg(projectPath);
   const deps = collectDeps(pkg);
-  const pm = detectPackageManager(projectPath);
+  const pm = detectPackageManager(projectPath, pkg);
 
   if (
     existsSync(join(projectPath, 'pnpm-workspace.yaml')) ||
@@ -287,7 +304,12 @@ export function detectFramework(projectPath) {
   }
 
   if (existsSync(join(projectPath, '.vitepress'))) {
-    return frameworkResult(FRAMEWORKS.vitepress, pm, projectPath);
+    const outDir = readVitepressOutDir(projectPath);
+    return frameworkResult(
+      outDir ? { ...FRAMEWORKS.vitepress, outputDir: outDir } : FRAMEWORKS.vitepress,
+      pm,
+      projectPath,
+    );
   }
 
   if (
