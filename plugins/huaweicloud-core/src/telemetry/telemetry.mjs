@@ -209,7 +209,6 @@ function shouldSendFirstUsePing() {
 export function trackInstall() {
   if (!isTelemetryEnabled()) return;
   ensureDir(AGENT_TELEMETRY_DIR);
-  writeTextFile(installStampPath(), new Date().toISOString());
 
   let count = 0;
   const existing = readTextFile(installCounterPath());
