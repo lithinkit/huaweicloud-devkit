@@ -97,8 +97,8 @@ function getHooks() {
 
 // ── Export: function-as-object serves both IDE and CLI ────────
 //
-//  IDE:  plugin.default() → returns hooks
-//  CLI:  plugin.default.server() → returns hooks (via { id, server })
+//  IDE : plugin.default()      -> returns hooks
+//  CLI : plugin.default.server -> returns hooks (via { id, server })
 
 function plugin() {
   debugLog('=== PLUGIN EXPORT CALLED ===');
