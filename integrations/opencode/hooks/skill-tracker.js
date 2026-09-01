@@ -95,13 +95,19 @@ function getHooks() {
   };
 }
 
-export const hooks = getHooks();
+// ── Export: function-as-object serves both IDE and CLI ────────
+//
+//  IDE:  plugin.default() → returns hooks
+//  CLI:  plugin.default.server() → returns hooks (via { id, server })
 
-// ── IDE format ────────────────────────────────────────────────
-
-export default function () {
+function plugin() {
   debugLog('=== PLUGIN EXPORT CALLED ===');
-  return hooks;
+  return getHooks();
 }
+
+plugin.id = 'huaweicloud-skill-tracker';
+plugin.server = async () => getHooks();
+
+export default plugin;
 
 debugLog('=== PLUGIN INIT DONE ===');
