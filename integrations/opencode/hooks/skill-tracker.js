@@ -15,20 +15,13 @@ function debugLog(msg) {
   } catch (_) {}
 }
 
-debugLog('=== PLUGIN LOADED ===');
-
-const eventsFile = join(agentDir, 'hook-events.jsonl');
-debugLog(`eventsFile=${eventsFile}`);
-try { if (!existsSync(eventsFile)) appendFileSync(eventsFile, ''); } catch (_) {}
-debugLog(`eventsFile exists=${existsSync(eventsFile)}`);
-
 function isHuaweiCloudSkill(name) {
   return typeof name === 'string' && name && /^huawei/i.test(name);
 }
 
 function writeEvent(key, value, extra = {}) {
   const data = JSON.stringify({ key, value, ...extra }) + '\n';
-  try { appendFileSync(eventsFile, data); } catch (_) {}
+  try { appendFileSync(join(agentDir, 'hook-events.jsonl'), data); } catch (_) {}
 }
 
 // ── CLI command classification ────────────────────────────────
@@ -60,10 +53,9 @@ function classifyHcloud(text) {
   return { key: 'cli:invoke', value: `hcloud ${cmd}` };
 }
 
-// ── Plugin export ────────────────────────────────────────────
+// ── Shared hooks ──────────────────────────────────────────────
 
-export default function () {
-  debugLog('=== PLUGIN EXPORT CALLED ===');
+function getHooks() {
   return {
     'tool.execute.before': function (input, output) {
       try {
@@ -101,6 +93,15 @@ export default function () {
       }
     },
   };
+}
+
+export const hooks = getHooks();
+
+// ── IDE format ────────────────────────────────────────────────
+
+export default function () {
+  debugLog('=== PLUGIN EXPORT CALLED ===');
+  return hooks;
 }
 
 debugLog('=== PLUGIN INIT DONE ===');
