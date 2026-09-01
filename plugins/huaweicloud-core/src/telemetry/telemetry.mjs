@@ -188,9 +188,11 @@ export function enqueueEvent(raw) {
 
 function checkDauPing() {
   const today = getUTCToday();
-  if (today === lastCheckedDate && stampExists(dauStampPath())) return;
+  if (today === lastCheckedDate) return;
   lastCheckedDate = today;
-  eventQueue.unshift(buildEvent({ key: 'dau:active_today', value: '1' }));
+  if (!stampExists(dauStampPath()) || getStampUTCDate(dauStampPath()) !== today) {
+    eventQueue.unshift(buildEvent({ key: 'dau:active_today', value: '1' }));
+  }
 }
 
 function shouldSendFirstUsePing() {
