@@ -6,11 +6,17 @@ Subnets without DNS configuration will fail cloud-init. Use these DNS addresses:
 
 | Region         | Primary DNS   | Secondary DNS   |
 | -------------- | ------------- | --------------- |
-| cn-north-1     | 100.125.1.250 | 100.125.129.250 |
+| cn-north-1     | 100.125.1.250 | 100.125.21.250  |
 | cn-north-4     | 100.125.1.250 | 100.125.129.250 |
-| cn-east-3      | 100.125.1.250 | 100.125.129.250 |
-| cn-south-1     | 100.125.1.250 | 100.125.129.250 |
-| ap-southeast-3 | 100.125.1.250 | 100.125.129.250 |
+| cn-east-3      | 100.125.1.250 | 100.125.64.250  |
+| cn-south-1     | 100.125.1.250 | 100.125.136.29  |
+| ap-southeast-3 | 100.125.1.250 | 100.125.128.250 |
+
+Get the authoritative values for any region at runtime (preferred over this table):
+
+```bash
+hcloud DNS ListNameServers --type=private --region=<region>
+```
 
 **Subnet create with DNS**:
 
@@ -21,8 +27,8 @@ hcloud VPC CreateSubnet \
   --subnet.cidr=10.50.1.0/24 \
   --subnet.gateway_ip=10.50.1.1 \
   --subnet.availability_zone=<az> \
-  --subnet.dnsList.1=100.125.1.250 \
-  --subnet.dnsList.2=100.125.129.250
+  --subnet.dnsList.1=<dns1> \
+  --subnet.dnsList.2=<dns2>
 ```
 
 ## Nested Prefix Summary

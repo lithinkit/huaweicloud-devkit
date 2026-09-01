@@ -175,6 +175,17 @@ test('web/static-site deployment intent offers target options with sandbox first
   assert.match(discovery, /do NOT default to OBS/);
 });
 
+test('devbridge uses the valid `list` command, not the non-existent `ls`', () => {
+  const sandbox = readFileSync(join(pluginRoot, 'skills', 'huawei-sandbox', 'SKILL.md'), 'utf8');
+  const sessionManager = readFileSync(join(pluginRoot, 'src', 'sandbox', 'session-manager.mjs'), 'utf8');
+
+  assert.doesNotMatch(sandbox, /devbridge ls\b/);
+  assert.match(sandbox, /devbridge list -j/);
+
+  assert.doesNotMatch(sessionManager, /devbridge ls\b/);
+  assert.match(sessionManager, /devbridge list -j/);
+});
+
 test('all plugin manifests are valid JSON', () => {
   const manifests = [
     join(pluginRoot, '.codex-plugin', 'plugin.json'),
@@ -446,16 +457,29 @@ test('setup-cli.mjs supports the hermes target end to end', () => {
   assert.match(setup, /function removeHermesMcpConfigBlock\(\)/);
   assert.match(setup, /function ensureHermesHooksConfig\(\)/);
   assert.match(setup, /function removeHermesHooksConfigBlock\(\)/);
+  assert.match(setup, /function ensureHermesHookAllowlist\(\)/);
+  assert.match(setup, /function hermesHookCommand\(\)/);
+  assert.match(setup, /function hermesPythonPluginsDir\(\)/);
+  assert.match(setup, /function hermesSafetyPluginDir\(\)/);
+  assert.match(setup, /function ensureHermesHookPlugin\(\)/);
+  assert.match(setup, /function removeHermesHookPlugin\(\)/);
   assert.match(setup, /copyDir\(skillsSrc, hermesSkillsDir\(\)\)/);
   assert.match(setup, /copyDir\(hooksDir, join\(pluginDest, 'hooks'\)\)/);
   assert.match(setup, /ensureHermesMcpConfig\(\)/);
   assert.match(setup, /ensureHermesHooksConfig\(\)/);
+  assert.match(setup, /ensureHermesHookAllowlist\(\)/);
+  assert.match(setup, /ensureHermesHookPlugin\(\)/);
   assert.match(setup, /mcp_servers:/);
   assert.match(setup, /huaweicloud-devkit:/);
   assert.match(setup, /HUAWEICLOUD_AGENT_TOOLKIT_MODE: "local"/);
   assert.match(setup, /hooks:/);
   assert.match(setup, /pre_tool_call:/);
   assert.match(setup, /matcher: "terminal"/);
+  assert.match(setup, /fail_closed: true/);
+  assert.match(setup, /shell-hooks-allowlist\.json/);
+  assert.match(setup, /name: huaweicloud-safety/);
+  assert.match(setup, /register_hook\("pre_tool_call"/);
+  assert.match(setup, /evaluate\(tool_name, args\)/);
   assert.match(setup, /huaweicloud-safety\.py/);
   const branches = setup.match(/target === 'hermes' \|\| target === 'all'/g);
   assert.ok(branches && branches.length >= 3, `hermes dispatch branches: ${branches?.length}`);

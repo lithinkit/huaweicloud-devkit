@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0-next.18 (2026-09-01)
+
+- docs(sandbox): fix source parameter value typos (#376)
+- fix(sandbox): deploy_check captures all statuses + returns tunnel URL (#412)
+- fix(hcloud): auto-accept privacy agreement on first use
+- fix(safety): prevent false-positives in destructive-delete rule and approvedCommand
+- docs(sandbox): scope GitCode SSL workaround to one-shot clone (#374)
+- fix: retry npm install on any failure and exit non-zero when it fails (#244)
+- fix: add codex desktop skills dir to resolveSkillsRoot fallback chain (#170)
+
 ## 1.1.0-next.15 (2026-08-31)
 
 - feat: add codearts-work (CodeArts Space) agent target support (#387)

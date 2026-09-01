@@ -81,3 +81,35 @@ test('python hook allows safe commands under Hermes context', () => {
   assert.equal(result.status, 0);
   assert.equal(result.stdout.trim(), '', 'safe commands should produce no output');
 });
+
+function runEvaluate(toolName, toolInput) {
+  const probe = [
+    'import importlib.util, json',
+    `spec = importlib.util.spec_from_file_location("hws", ${JSON.stringify(hookPath)})`,
+    'm = importlib.util.module_from_spec(spec)',
+    'spec.loader.exec_module(m)',
+    `print(json.dumps(m.evaluate(${JSON.stringify(toolName)}, ${JSON.stringify(toolInput)})))`,
+  ].join('; ');
+  return spawnSync(pythonBin, ['-c', probe], { encoding: 'utf8' });
+}
+
+test('python hook evaluate() is importable and blocks public admin port', () => {
+  const result = runEvaluate('terminal', {
+    command:
+      'hcloud VPC CreateSecurityGroupRule --security_group_rule.port_range_min=22 --security_group_rule.remote_ip_prefix=0.0.0.0/0',
+  });
+  if (pythonUnavailable(result)) return;
+
+  assert.equal(result.status, 0);
+  const reason = JSON.parse(result.stdout);
+  assert.equal(typeof reason, 'string');
+  assert.match(reason, /public|port|internet/i);
+});
+
+test('python hook evaluate() allows safe commands', () => {
+  const result = runEvaluate('terminal', { command: 'ls -la' });
+  if (pythonUnavailable(result)) return;
+
+  assert.equal(result.status, 0);
+  assert.equal(JSON.parse(result.stdout), null);
+});

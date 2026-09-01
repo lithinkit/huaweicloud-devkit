@@ -14,6 +14,14 @@
 
 - Node.js >= 22
 
+> **国内用户**：使用默认 npm 镜像时可能遇到下载缓慢或连接失败的问题，建议配置华为云 npm 镜像：
+>
+> ```bash
+> npm config set registry https://mirrors.huaweicloud.com/repository/npm/
+> ```
+>
+> 恢复默认镜像：`npm config delete registry`
+
 ## 快速开始
 
 > 省略 `--target` 时，安装器会自动检测机器上的 agent，检测到多个时**全部安装**。建议始终指定 `--target` 以明确安装目标。

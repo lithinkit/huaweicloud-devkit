@@ -95,7 +95,7 @@ Setup is a **plugin-side preflight** — the developer should be asked a questio
 2. **Real-name verification only** (`HDKIT_NOT_REALNAME`): tell the developer once, "Huawei Cloud requires real-name verification before using the sandbox — please complete it in the Huawei Cloud console (实名认证)." and stop — do not retry `connect` in a loop
 3. **Sign agreement only** (`HDKIT_NOT_AGREEMENT`): **STOP and do NOT sign on your own.** Ask the developer: "Huawei Cloud sandbox requires signing the latest developer service agreement. May I sign it for you?" Then **wait for the developer to explicitly agree** (e.g. "签署" / "确认" / "sign it"). Only after explicit consent call `huaweicloud_sandbox_sign_agreement` and return its result (`signed`/`signedCount`) to the developer. **Never sign a legal agreement on the developer's behalf without their explicit, unambiguous consent.** Do not expose the underlying sandbox/DevBridge service as a separate entity the developer must understand or sign up for
 4. **Both missing** (`HDKIT_NOT_REALNAME_AND_AGREEMENT`): present **both** requirements together in one message — the real-name verification steps (console, step 2) **and** the agreement-signing request (step 3, wait for explicit consent) — so the developer can complete both at once
-5. **Connect**: `huaweicloud_sandbox_connect` — returns `session_id`, `dev_stage_id`, `connection_id`, `connection_address`. The `source` parameter identifies the calling agent (valid values: `'CLI'`, `'WEb'`, `'VSCODE'`, `'CURSO'`, `'WEBIDE'`, etc. — case-sensitive). The `git` parameter (with `repo_url`, `repo_name`, `target_path`) is accepted but does NOT auto-clone the repository — always clone manually.
+5. **Connect**: `huaweicloud_sandbox_connect` — returns `session_id`, `dev_stage_id`, `connection_id`, `connection_address`. The `source` parameter identifies the calling agent (valid values: `CLI`, `WEB`, `VSCODE`, `WEBVNC`, `WEBPTY`, `WEBIDE`, `CURSOR`, etc. — case-sensitive, all uppercase). The `git` parameter (with `repo_url`, `repo_name`, `target_path`) is accepted but does NOT auto-clone the repository — always clone manually.
 6. **Cleanup previous deployments** (after first connect to a sandbox): nginx configs, DevBridge tunnels, and stale web processes from previous deployments can cause port conflicts and quota errors. Run cleanup immediately after connect:
 
    ```bash
@@ -253,7 +253,7 @@ fi
 
 ```bash
 # Step A: List all tunnels (both active and stale)
-devbridge ls --all
+devbridge list -j
 # Step B: Remove all stale tunnels
 devbridge delete-all
 # Step C: Retry tunnel creation
@@ -265,6 +265,7 @@ This eliminates the most common deployment failure — historical tunnels from p
 
 - The public URL has the form `https://<id>-<port>.cn-north-4-bridge.myhuaweicloud.com` (from the `Tunnel URL:` line).
 - **Return this URL to the developer as the deployment result link.** Keep the host process running (do not close the session before handing over the URL).
+- Tunnel `description` (`-d`) accepts only Chinese characters, letters, and digits (0-64). Symbols such as `-`/`_`/spaces are rejected (`Invalid tunnel description`).
 - Internal docs: https://huaweicloud.github.io/devspace-devbridge/
 
 **No local downgrade**: if the tunnel tooling cannot be installed in the sandbox, STOP and report a generic error ("无法生成访问地址") without technical detail. Never install it on the developer's local machine — a local install would defeat the purpose of sandbox deployment.
@@ -356,13 +357,13 @@ Use the detected `PKG_MGR` for all package installations below.
 
 **Architecture awareness**: the sandbox runs Linux aarch64 (ARM64). Native binaries built on x64 (Windows/macOS Intel) will not execute. Always install dependencies and build inside the sandbox. For projects with native addons (Taro `@swc/core`, Prisma, `esbuild`, `node-gyp`), local x64 pre-build + upload of `dist/` output is a viable alternative when sandbox builds fail.
 
-**GitCode SSL**: if `git clone` from GitCode fails with SSL certificate errors:
+**GitCode SSL**: if `git clone` from GitCode fails with SSL certificate errors, use a one-shot override (do NOT set it globally — that would disable cert verification for every repo):
 
 ```bash
-git config --global http.sslVerify false
+git -c http.sslVerify=false clone <repo-url>
 ```
 
-Then retry the clone. This is a known sandbox environment limitation.
+Then retry the clone. This bypasses SSL verification only for this single clone.
 
 #### 3b: Install nginx (before project upload)
 
@@ -751,7 +752,7 @@ Follow the standard [Expose the deployed app](#expose-the-deployed-app-public-ur
 
 Use `exec_with_session` to background DevBridge. For SSR, DevBridge tunnels the nginx public port (not the Node port directly).
 
-**Pre-flight**: always run `devbridge delete-all` before creating a new tunnel to prevent `10006: quota exceeded` from accumulated stale tunnels. If you still get quota error, list tunnels with `devbridge ls --all`, delete stale ones, and retry.
+**Pre-flight**: always run `devbridge delete-all` before creating a new tunnel to prevent `10006: quota exceeded` from accumulated stale tunnels. If you still get quota error, list tunnels with `devbridge list -j`, delete stale ones, and retry.
 
 Extract the tunnel URL from DevBridge output. The public URL has the form `https://<id>-<port>.cn-north-4-bridge.myhuaweicloud.com`. **Return this URL to the developer as the deployment result.**
 

@@ -840,7 +840,7 @@ fi`;
   try {
     const tunnelCheck = await execOneShot(
       workspaceId,
-      'devbridge ls 2>/dev/null | grep -q "Tunnel URL" && echo "ACTIVE" || echo "INACTIVE"',
+      'devbridge list -j 2>/dev/null | grep -q \'"tunnelId"\' && echo "ACTIVE" || echo "INACTIVE"',
       username,
       10000,
     );
@@ -916,7 +916,7 @@ export async function deployCheck(
     `fi`,
     ``,
     `TOTAL=$((TOTAL+1))`,
-    `if devbridge ls 2>/dev/null | grep -q "Tunnel URL"; then`,
+    `if devbridge list -j 2>/dev/null | grep -q '"tunnelId"'; then`,
     `  echo "devbridge_tunnel:PASS"`,
     `  PASS=$((PASS+1))`,
     `else`,
@@ -924,8 +924,9 @@ export async function deployCheck(
     `fi`,
     ``,
     `TOTAL=$((TOTAL+1))`,
-    `TUNNEL_URL=$(devbridge ls 2>/dev/null | grep -oP "Tunnel URL: \\Khttps://[^ ]+")`,
-    `if [ -n "$TUNNEL_URL" ]; then`,
+    `TUNNEL_ID=$(devbridge list -j 2>/dev/null | grep -oP '"tunnelId":\\s*"\\K[^"]+' | head -1)`,
+    `TUNNEL_URL="https://\${TUNNEL_ID}-${port}.cn-north-4-bridge.myhuaweicloud.com"`,
+    `if [ -n "$TUNNEL_ID" ] && [ -n "$TUNNEL_URL" ]; then`,
     `  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$TUNNEL_URL" 2>/dev/null || echo "000")`,
     `  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "304" ]; then`,
     `    echo "tunnel_url_accessible:PASS ($TUNNEL_URL -> $HTTP_CODE)"`,
@@ -937,20 +938,17 @@ export async function deployCheck(
     `  echo "tunnel_url_accessible:FAIL (no tunnel URL)"`,
     `fi`,
     ``,
-    `${
-      isCrossPlatform
-        ? `
+    `${`
 TOTAL=$((TOTAL+1))
 if [ -f "${outputPath}/qr.png" ]; then
   echo "qr_code:PASS"
   PASS=$((PASS+1))
 else
-  echo "qr_code:FAIL (cross-platform app missing QR code)"
+  echo "qr_code:FAIL (no QR code — generate one for cross-platform H5 apps)"
 fi
-`
-        : ''
-    }`,
+`}`,
     `echo "SCORE:\${PASS}/\${TOTAL}"`,
+    `echo "TUNNEL_URL:\${TUNNEL_URL:-}"`,
     `[ "\${PASS}" = "\${TOTAL}" ] && echo "VERDICT:COMPLETE" || echo "VERDICT:INCOMPLETE"`,
   ]
     .filter(Boolean)
@@ -961,10 +959,11 @@ fi
   const checks = {};
   const lines = stdout.split('\n');
   for (const line of lines) {
-    const m = line.match(/^(\w+):(PASS|FAIL)\b(.*)/);
+    const m = line.match(/^(\w+):(\w+)\b(.*)/);
     if (m) checks[m[1]] = { status: m[2], detail: (m[3] || '').trim() };
   }
   const scoreMatch = stdout.match(/SCORE:(\d+)\/(\d+)/);
+  const tunnelMatch = stdout.match(/TUNNEL_URL:(https:\/\/[^\s]+)/);
   const complete = /VERDICT:COMPLETE/.test(stdout);
 
   const missing = [];
@@ -980,6 +979,7 @@ fi
     checkType: isCrossPlatform ? 'cross-platform' : 'standard',
     checks,
     score: scoreMatch ? { pass: parseInt(scoreMatch[1], 10), total: parseInt(scoreMatch[2], 10) } : null,
+    publicUrl: tunnelMatch ? tunnelMatch[1] : undefined,
     missingSteps: missing.length > 0 ? missing.join(', ') : undefined,
     nextStep: !complete
       ? missing.includes('devbridge_tunnel') || missing.includes('tunnel_url_accessible')

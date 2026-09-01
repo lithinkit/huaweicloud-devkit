@@ -40,7 +40,7 @@ hcloud RDS <Operation> --cli-region=<region> [--key=value ...]
 | Automated backups use OBS           | Backup storage incurs separate charges. Set retention period explicitly                                                                      |
 | Storage auto-scaling off by default | Enable before storage runs out or instance goes read-only                                                                                    |
 | `--password` conflicts with KooCLI  | Use `--cli-jsonInput=<file>` with JSON file (see `--cli-jsonInput` section below). The `printf "b\n"` workaround is broken in KooCLI 7.2.12+ |
-| Volume type must match flavor       | General→CLOUDSSD; Dedicated→CLOUDSSD\|ESSD; ARM→ULTRAHIGH                                                                                    |
+| Volume type must match flavor       | General→CLOUDSSD; Dedicated→CLOUDSSD\|ESSD; ARM→CLOUDSSD                                                                                     |
 | Flavor not in region                | Always `ListFlavors` first. Spec codes vary by region                                                                                        |
 | `database_name` is case-sensitive   | Use `MySQL` / `PostgreSQL` / `SQLServer` / `MariaDB` — NOT lower-case `mysql`                                                                |
 | Instance creation takes 3–8 min     | Status: BUILD→MODIFYING→ACTIVE. Poll every 15s: `hcloud RDS ListInstances --cli-region=<r> --instance_id=<id> \| jq '.instances[0].status'`  |
@@ -55,7 +55,7 @@ hcloud RDS <Operation> --cli-region=<region> [--key=value ...]
 hcloud RDS ListInstances --cli-region=<r>
 hcloud RDS ListFlavors --database_name=<engine> --cli-region=<r>
 hcloud RDS ListDatastores --database_name=<engine> --cli-region=<r>
-hcloud RDS ListEngineFlavors --instance_id=<id> --cli-region=<r>
+hcloud RDS ListEngineFlavors --instance_id=<id> --availability_zone_ids=<az> --ha_mode=<mode> --cli-region=<r>
 ```
 
 ### Create Instance
@@ -109,7 +109,7 @@ hcloud RDS CreateInstance --cli-region=<r> \
 | `--name`              | Yes      | Instance name                                                                                |
 | `--datastore`         | Yes      | `--datastore.type=<engine> --datastore.version=<version>`                                    |
 | `--flavor_ref`        | Yes      | From `ListFlavors` output                                                                    |
-| `--volume`            | Yes      | Type matching: General→CLOUDSSD, Dedicated→CLOUDSSD\|ESSD, ARM→ULTRAHIGH                     |
+| `--volume`            | Yes      | Type matching: General→CLOUDSSD, Dedicated→CLOUDSSD\|ESSD, ARM→CLOUDSSD                      |
 | `--vpc_id`            | Yes      | Must exist in target region                                                                  |
 | `--subnet_id`         | Yes      | Must exist in target region                                                                  |
 | `--security_group_id` | Yes      | Must have DB port open                                                                       |
@@ -150,7 +150,8 @@ hcloud RDS CreateRestoreInstance --instance_id=<id> --backup_id=<id> --name=<new
 ## Read Replicas
 
 ```bash
-hcloud RDS CreateReadReplica --replica_of_id=<primary-id> --name=<name> --flavor_ref=<id> --volume.type=<vol-type> --volume.size=<size> --cli-region=<r>
+# Create a read replica via CreateInstance with --replica_of_id
+hcloud RDS CreateInstance --replica_of_id=<primary-id> --name=<name> --flavor_ref=<id> --volume.type=<vol-type> --volume.size=<size> --cli-region=<r>
 ```
 
 ## Fault Diagnosis
@@ -159,7 +160,7 @@ hcloud RDS CreateReadReplica --replica_of_id=<primary-id> --name=<name> --flavor
 hcloud RDS ListErrorLogs --instance_id=<id> --start_date=2024-01-01T00:00:00Z --end_date=2024-01-31T23:59:59Z --cli-region=<r>
 hcloud RDS ListSlowLogs --instance_id=<id> --start_date=... --end_date=... --cli-region=<r>
 hcloud RDS ShowReplicationStatus --instance_id=<id> --cli-region=<r>
-hcloud RDS ListInstanceDiagnosis --cli-region=<r>
+hcloud RDS ListInstanceDiagnosis --engine=<engine> --cli-region=<r>
 ```
 
 ## Connecting

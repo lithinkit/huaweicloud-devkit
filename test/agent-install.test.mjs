@@ -273,6 +273,23 @@ test('hermes install creates skills, MCP server, and safety policy', () => {
     assert.ok(existsSync(join(pd, 'src', 'mcp-server.mjs')));
     assert.ok(existsSync(join(pd, 'safety', 'policy.json')));
     assert.equal(pluginVersion(pd), pkg.version);
+    const allowlistPath = join(home, '.hermes', 'shell-hooks-allowlist.json');
+    assert.ok(existsSync(allowlistPath), 'shell hook allowlist must be written on install');
+    const allowlist = JSON.parse(readFileSync(allowlistPath, 'utf8'));
+    const entry = (allowlist.approvals || []).find(
+      (a) =>
+        a &&
+        a.event === 'pre_tool_call' &&
+        typeof a.command === 'string' &&
+        a.command.includes('huaweicloud-safety.py'),
+    );
+    assert.ok(entry, 'allowlist must pre-authorize the pre_tool_call safety hook');
+    const pluginDir = join(home, '.hermes', 'plugins', 'huaweicloud-safety');
+    assert.ok(existsSync(join(pluginDir, 'plugin.yaml')), 'hook plugin manifest must be installed');
+    assert.ok(existsSync(join(pluginDir, '__init__.py')), 'hook plugin module must be installed');
+    const init = readFileSync(join(pluginDir, '__init__.py'), 'utf8');
+    assert.match(init, /def register\(ctx\)/);
+    assert.match(init, /register_hook\("pre_tool_call"/);
   } finally {
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
@@ -288,6 +305,19 @@ test('hermes uninstall removes installed files', () => {
     assert.match(res.stdout, /Uninstall complete/);
     assert.equal(countSkills(join(home, '.hermes', 'skills')), 0);
     assert.ok(!existsSync(join(home, '.hermes', 'huaweicloud-plugins')));
+    const allowlistPath = join(home, '.hermes', 'shell-hooks-allowlist.json');
+    if (existsSync(allowlistPath)) {
+      const allowlist = JSON.parse(readFileSync(allowlistPath, 'utf8'));
+      const remains = (allowlist.approvals || []).some((a) => {
+        const cmd = typeof a === 'string' ? a : a?.command;
+        return typeof cmd === 'string' && cmd.includes('huaweicloud-safety.py');
+      });
+      assert.ok(!remains, 'uninstall must remove the safety hook approval from the allowlist');
+    }
+    assert.ok(
+      !existsSync(join(home, '.hermes', 'plugins', 'huaweicloud-safety')),
+      'uninstall must remove the safety hook plugin',
+    );
   } finally {
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });

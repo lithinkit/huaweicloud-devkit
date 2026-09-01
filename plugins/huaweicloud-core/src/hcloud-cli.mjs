@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -9,6 +9,20 @@ import { getProxySettings } from './proxy/proxy-config.mjs';
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_FORCE_KILL_AFTER_MS = 2_000;
 const DEFAULT_MAX_RETRIES = 1;
+const LARGE_OUTPUT_THRESHOLD = 50_000;
+const OUTPUT_DIR = join('/tmp', 'huaweicloud-devkit');
+
+function saveLargeOutput(rawStdout) {
+  if (rawStdout.length <= LARGE_OUTPUT_THRESHOLD) return null;
+  try {
+    mkdirSync(OUTPUT_DIR, { recursive: true });
+    const filePath = join(OUTPUT_DIR, `output-${Date.now()}.json`);
+    writeFileSync(filePath, rawStdout, { encoding: 'utf8' });
+    return filePath;
+  } catch {
+    return null;
+  }
+}
 
 export function planHcloudCommand(args, options = {}) {
   const normalizedArgs = Array.isArray(args) ? args.map(String) : [];
@@ -71,6 +85,7 @@ function runHcloudOnce(plan, options) {
   const executable = options.executable || options.env?.HCLOUD_BIN || discoverHcloudPath() || 'hcloud';
   const executableArgs = Array.isArray(options.executableArgs) ? options.executableArgs.map(String) : [];
   const cwd = options.cwd || undefined;
+  const stdin = options.stdin ?? 'y\n';
 
   return new Promise((resolve) => {
     const proxySettings = getProxySettings();
@@ -90,11 +105,11 @@ function runHcloudOnce(plan, options) {
         ...options.env,
       },
     });
-    if (options.stdin) {
-      if (typeof options.stdin === 'function') {
-        options.stdin(child.stdin);
+    if (stdin) {
+      if (typeof stdin === 'function') {
+        stdin(child.stdin);
       } else {
-        child.stdin.write(String(options.stdin));
+        child.stdin.write(String(stdin));
         child.stdin.end();
       }
     }
@@ -111,6 +126,13 @@ function runHcloudOnce(plan, options) {
       clearTimeout(timer);
       clearTimeout(forceTimer);
       clearTimeout(settleTimer);
+      if (result.stdout && String(result.stdout).length > LARGE_OUTPUT_THRESHOLD) {
+        const outputFile = saveLargeOutput(stdout);
+        if (outputFile) {
+          result.outputFile = outputFile;
+          result.stdout = String(result.stdout).slice(0, 2000) + `\n...(truncated, full output saved to ${outputFile})`;
+        }
+      }
       resolve(result);
     }
 

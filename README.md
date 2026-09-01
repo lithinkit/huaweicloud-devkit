@@ -14,6 +14,14 @@ Supports OpenCode, Codex, CodeArts Agent, WorkBuddy, DeepSeek Harness (DSH), Off
 
 - Node.js >= 22
 
+> **China mainland users**: If you experience slow downloads or connection issues with the default npm registry, configure the Huawei Cloud npm mirror:
+>
+> ```bash
+> npm config set registry https://mirrors.huaweicloud.com/repository/npm/
+> ```
+>
+> Restore the default registry: `npm config delete registry`
+
 ## Quick Start
 
 > If `--target` is omitted, the installer auto-detects agents on your machine. When multiple agents are detected, **all of them** will be installed. Specify `--target` to control which agent receives the install.
