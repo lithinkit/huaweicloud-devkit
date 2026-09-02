@@ -6,7 +6,7 @@ import { homedir, platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 function detectHarnessFromPath() {
-  const selfPath = new URL(import.meta.url).pathname;
+  const selfPath = new URL(import.meta.url).pathname.toLowerCase();
   if (selfPath.includes('/.codeartsdoer/')) return 'codearts';
   if (selfPath.includes('/.config/opencode/')) return 'opencode';
   if (selfPath.includes('/.codex/')) return 'codex-desktop';
@@ -14,6 +14,7 @@ function detectHarnessFromPath() {
   if (selfPath.includes('/.atomcode/')) return 'atomcode';
   if (selfPath.includes('/.dsh/')) return 'dsh';
   if (selfPath.includes('/.hermes/')) return 'hermes';
+  if (selfPath.includes('/hermes/')) return 'hermes';
   if (selfPath.includes('/.officeace/')) return 'officeace';
   return null;
 }
@@ -41,6 +42,27 @@ function detectDshVersion() {
     const p = join(npmGlobal, '@deepseek-ai', 'dsh', 'package.json');
     if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8')).version || null;
   } catch {}
+  return null;
+}
+
+function detectHermesVersion() {
+  // 1. Explicit env var (set by Hermes or user config)
+  if (process.env.HERMES_VERSION) return process.env.HERMES_VERSION;
+  // 2. Read from hermes_cli/__init__.py in the Hermes install dir
+  const candidates = [];
+  if (process.env.HERMES_HOME) candidates.push(process.env.HERMES_HOME);
+  if (process.env.LOCALAPPDATA) candidates.push(join(process.env.LOCALAPPDATA, 'hermes', 'hermes-agent'));
+  candidates.push(join(homedir(), '.hermes', 'hermes-agent'));
+  for (const base of candidates) {
+    try {
+      const initFile = join(base, 'hermes_cli', '__init__.py');
+      if (existsSync(initFile)) {
+        const content = readFileSync(initFile, 'utf8');
+        const m = content.match(/__version__\s*=\s*['"]([^'"]+)['"]/);
+        if (m) return m[1];
+      }
+    } catch {}
+  }
   return null;
 }
 
@@ -239,6 +261,7 @@ async function dispatch(method, params) {
     const ideVersion = detectIdeVersion();
     const dshVersion = detectDshVersion();
     const wbVersion = detectWorkBuddyVersion();
+    const hermesVersion = detectHermesVersion();
     initTelemetry({
       harness: hostHarness,
       version: hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor'
@@ -247,7 +270,9 @@ async function dispatch(method, params) {
           ? (dshVersion || ci.version || '0.0.0')
           : hostHarness === 'workbuddy'
             ? (wbVersion || ci.version || '0.0.0')
-            : (ci.version || '0.0.0'),
+            : hostHarness === 'hermes'
+              ? (hermesVersion || ci.version || '0.0.0')
+              : (ci.version || '0.0.0'),
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',

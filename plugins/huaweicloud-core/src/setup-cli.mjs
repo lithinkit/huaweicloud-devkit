@@ -1161,7 +1161,10 @@ function registerCodeartsMcp(configPath) {
       existing.timeout === 300000
     ) {
       let changed = false;
-      if (!existing.env) { existing.env = {}; changed = true; }
+      if (!existing.env) {
+        existing.env = {};
+        changed = true;
+      }
       if (!existing.env.HUAWEICLOUD_AGENT_TOOLKIT_MODE) {
         existing.env.HUAWEICLOUD_AGENT_TOOLKIT_MODE = 'local';
         changed = true;
@@ -1170,7 +1173,10 @@ function registerCodeartsMcp(configPath) {
         existing.env.HCLOUD_BIN = hcloudBin.replace(/\\/g, '/');
         changed = true;
       }
-      if (existing.enabled !== true) { existing.enabled = true; changed = true; }
+      if (existing.enabled !== true) {
+        existing.enabled = true;
+        changed = true;
+      }
       if (changed) {
         mkdirSync(dirname(configPath), { recursive: true });
         writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -1664,9 +1670,7 @@ function uninstallWorkBuddy() {
     } catch {}
     if (settings.hooks?.PostToolUse) {
       const before = settings.hooks.PostToolUse.length;
-      settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
-        (e) => e?.matcher !== '*',
-      );
+      settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter((e) => e?.matcher !== '*');
       if (settings.hooks.PostToolUse.length === 0) delete settings.hooks.PostToolUse;
       if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
       if (before !== settings.hooks.PostToolUse?.length) {
@@ -2085,7 +2089,7 @@ async function installDsh() {
 async function updateDsh() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
-const safetyDir = join(PLUGIN_ROOT, 'safety');
+  const safetyDir = join(PLUGIN_ROOT, 'safety');
   const pluginDest = dshPluginsDir();
   const hookSrc = join(PACKAGE_ROOT, 'integrations', 'dsh', 'hook-plugin.mjs');
 
@@ -2410,9 +2414,19 @@ function hermesHookCommand() {
   return `${pythonBin} ${hermesHookScript()}`;
 }
 
+function hermesTelemetryHookScript() {
+  return join(hermesPluginsDir(), 'hooks', 'huaweicloud-telemetry.py').replace(/\\/g, '/');
+}
+
+function hermesTelemetryHookCommand() {
+  const pythonBin = process.platform === 'win32' ? 'python' : 'python3';
+  return `${pythonBin} ${hermesTelemetryHookScript()}`;
+}
+
 function ensureHermesHooksConfig() {
   const configPath = hermesConfigFile();
   const hookCommand = hermesHookCommand();
+  const telemetryHookCommand = hermesTelemetryHookCommand();
 
   const blockLines = [
     'hooks:',
@@ -2421,6 +2435,10 @@ function ensureHermesHooksConfig() {
     `      command: "${hookCommand}"`,
     '      timeout: 5',
     '      fail_closed: true',
+    '    - matcher: "skill_view|skills_list|skill_manage|terminal"',
+    `      command: "${telemetryHookCommand}"`,
+    '      timeout: 5',
+    '      fail_closed: false',
   ];
   const block = blockLines.join('\n');
 
@@ -2432,7 +2450,8 @@ function ensureHermesHooksConfig() {
     if (
       existing.includes('hooks:') &&
       existing.includes(`command: "${hookCommand}"`) &&
-      existing.includes('fail_closed: true')
+      existing.includes('fail_closed: true') &&
+      existing.includes(`command: "${telemetryHookCommand}"`)
     ) {
       console.log(`  Hooks config unchanged: ${configPath}`);
       return false;
@@ -2467,6 +2486,7 @@ function hermesAllowlistPath() {
 
 function ensureHermesHookAllowlist() {
   const hookCommand = hermesHookCommand();
+  const telemetryHookCommand = hermesTelemetryHookCommand();
   const allowlistPath = hermesAllowlistPath();
 
   let data = { approvals: [] };
@@ -2479,21 +2499,30 @@ function ensureHermesHookAllowlist() {
     } catch {}
   }
   const approvals = Array.isArray(data.approvals) ? data.approvals : [];
-  const already = approvals.some(
-    (a) => a && typeof a === 'object' && a.event === 'pre_tool_call' && a.command === hookCommand,
-  );
-  if (already) {
+
+  let changed = false;
+  for (const cmd of [hookCommand, telemetryHookCommand]) {
+    const already = approvals.some(
+      (a) => a && typeof a === 'object' && a.event === 'pre_tool_call' && a.command === cmd,
+    );
+    if (!already) {
+      const entry = {
+        event: 'pre_tool_call',
+        command: cmd,
+        approved_at: new Date().toISOString(),
+        script_mtime_at_approval: hermesHookScriptMtime(),
+      };
+      approvals.push(entry);
+      changed = true;
+    }
+  }
+
+  if (!changed) {
     console.log(`  Hook allowlist unchanged: ${allowlistPath}`);
     return false;
   }
 
-  const entry = {
-    event: 'pre_tool_call',
-    command: hookCommand,
-    approved_at: new Date().toISOString(),
-    script_mtime_at_approval: hermesHookScriptMtime(),
-  };
-  data.approvals = [...approvals, entry];
+  data.approvals = approvals;
   mkdirSync(dirname(allowlistPath), { recursive: true });
   writeFileSync(allowlistPath, JSON.stringify(data, null, 2));
   console.log(`  Hook allowlist updated: ${allowlistPath}`);
@@ -2665,6 +2694,7 @@ async function installHermes() {
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
   const hooksDir = join(PLUGIN_ROOT, 'hooks');
+  const integrationsHooksDir = resolve(PLUGIN_ROOT, '..', '..', 'integrations', 'hermes', 'hooks');
   const pluginDest = hermesPluginsDir();
   const skipMcp = process.argv.includes('--skip-mcp-server');
 
@@ -2679,6 +2709,8 @@ async function installHermes() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
   copyDir(hooksDir, join(pluginDest, 'hooks'));
   console.log(`  Safety Hooks -> ${join(pluginDest, 'hooks')}`);
+  // Telemetry hook lives in integrations/hermes/hooks/ (platform-specific adapter)
+  copyFileSync(join(integrationsHooksDir, 'huaweicloud-telemetry.py'), join(pluginDest, 'hooks', 'huaweicloud-telemetry.py'));
 
   if (!skipMcp) ensureHermesMcpConfig();
   ensureHermesHooksConfig();
@@ -2693,6 +2725,7 @@ async function updateHermes() {
   const srcDir = join(PLUGIN_ROOT, 'src');
   const safetyDir = join(PLUGIN_ROOT, 'safety');
   const hooksDir = join(PLUGIN_ROOT, 'hooks');
+  const integrationsHooksDir = resolve(PLUGIN_ROOT, '..', '..', 'integrations', 'hermes', 'hooks');
   const pluginDest = hermesPluginsDir();
 
   copyDir(skillsSrc, hermesSkillsDir());
@@ -2704,6 +2737,8 @@ async function updateHermes() {
   console.log(`  Safety Policy updated -> ${join(pluginDest, 'safety')}`);
   copyDir(hooksDir, join(pluginDest, 'hooks'));
   console.log(`  Safety Hooks updated -> ${join(pluginDest, 'hooks')}`);
+  // Telemetry hook lives in integrations/hermes/hooks/ (platform-specific adapter)
+  copyFileSync(join(integrationsHooksDir, 'huaweicloud-telemetry.py'), join(pluginDest, 'hooks', 'huaweicloud-telemetry.py'));
   ensureHermesMcpConfig();
   ensureHermesHooksConfig();
   ensureHermesHookAllowlist();
@@ -2784,6 +2819,9 @@ function hermesStatus() {
   );
   console.log(
     `  Safety Hooks: ${existsSync(join(pluginDir, 'hooks', 'huaweicloud-safety.py')) ? '\x1b[32mInstalled\x1b[0m' : '\x1b[31mNot installed\x1b[0m'}`,
+  );
+  console.log(
+    `  Telemetry Hook: ${existsSync(join(pluginDir, 'hooks', 'huaweicloud-telemetry.py')) ? '\x1b[32mInstalled\x1b[0m' : '\x1b[31mNot installed\x1b[0m'}`,
   );
   console.log(
     `  Hook allowlist: ${hermesHookAllowlisted() ? '\x1b[32mApproved\x1b[0m' : '\x1b[31mNot allowlisted\x1b[0m'}`,
