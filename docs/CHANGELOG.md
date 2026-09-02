@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1-next.3 (2026-09-02)
+
+- feat(ecs): auto-check security group rules during plan phase (#443) (#462)
+- fix: use CodeArts Work native MCP format (mcp key, command array, environment) (#461)
+
+## 1.1.1-next.2 (2026-09-02)
+
+- docs: voucher_status 工具描述内嵌主动提示行为指令
+- fix(detect): handle unquoted outDir in VitePress config
+- fix(sandbox): clean URL support for static nginx + cross-arch build guidance
+- fix(release): use JS filter instead of shell glob for tag lookup
+
 ## 1.1.1-next.1 (2026-09-02)
 
 - docs: 强化 huawei-voucher skill 主动提示准则与话术
