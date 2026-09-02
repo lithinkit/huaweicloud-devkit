@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { stdin, stdout } from 'node:process';
 import { rmSync, existsSync, readFileSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
+import { resolve, dirname, join, basename } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
@@ -44,6 +44,40 @@ function detectDshVersion() {
   return null;
 }
 
+function detectWorkBuddyVersion() {
+  const username = process.env.USERNAME || basename(homedir());
+  const relPath = join('Users', username, 'AppData', 'Local', 'Programs', 'WorkBuddy');
+
+  // Read resources/install-manifest.json for user-facing "appVersion" (e.g. "5.4.7"),
+  // falling back to the "version" file (internal build number like "37.10.3-24").
+  function tryBase(base) {
+    const manifest = join(base, 'resources', 'install-manifest.json');
+    try {
+      if (existsSync(manifest)) {
+        const m = JSON.parse(readFileSync(manifest, 'utf8'));
+        if (m.appVersion) return `v${m.appVersion}`;
+      }
+    } catch {}
+    const verFile = join(base, 'version');
+    try { if (existsSync(verFile)) return readFileSync(verFile, 'utf8').trim() || null; } catch {}
+    return null;
+  }
+
+  // 1. Try LOCALAPPDATA (most common — user profile drive)
+  const localApp = join(process.env.LOCALAPPDATA || '', 'Programs', 'WorkBuddy');
+  const r = tryBase(localApp);
+  if (r) return r;
+
+  // 2. Iterate all logical drives (A-Z) to handle off-profile-drive installs
+  for (let d = 'A'.charCodeAt(0); d <= 'Z'.charCodeAt(0); d++) {
+    const drive = String.fromCharCode(d) + ':';
+    const r2 = tryBase(join(drive, '/', relPath));
+    if (r2) return r2;
+  }
+
+  return null;
+}
+
 import { TOOL_DEFINITIONS, callTool } from './tools.mjs';
 import { initTelemetry } from './telemetry/telemetry.mjs';
 import { detectAgentHarness } from './telemetry/agent-detect.mjs';
@@ -58,6 +92,11 @@ if (endpointIdx > -1 && process.argv[endpointIdx + 1]) {
   process.env.HDKITSERVICE_ENDPOINT = process.argv[endpointIdx + 1];
 }
 
+const telemetryEndpointIdx = process.argv.indexOf('--telemetry-endpoint');
+if (telemetryEndpointIdx > -1 && process.argv[telemetryEndpointIdx + 1]) {
+  process.env.HUAWEICLOUD_DEVKIT_TELEMETRY_ENDPOINT = process.argv[telemetryEndpointIdx + 1];
+}
+
 try {
   const { readProxyConfig } = await import('./proxy/proxy-config.mjs');
   const proxyConfig = readProxyConfig();
@@ -70,11 +109,6 @@ try {
     }
   }
 } catch {}
-
-const telemetryEndpointIdx = process.argv.indexOf('--telemetry-endpoint');
-if (telemetryEndpointIdx > -1 && process.argv[telemetryEndpointIdx + 1]) {
-  process.env.HUAWEICLOUD_DEVKIT_TELEMETRY_ENDPOINT = process.argv[telemetryEndpointIdx + 1];
-}
 
 // The MCP server is now loaded by a live agent session. Clear the install marker
 // in this plugin dir so `doctor` no longer reports "restart needed".
@@ -128,8 +162,6 @@ stdin.on('data', (chunk) => {
   buffer = Buffer.concat([buffer, chunk]);
   readFrames();
 });
-
-stdin.on('end', () => process.exit(0));
 
 function readFrames() {
   while (true) {
@@ -206,13 +238,16 @@ async function dispatch(method, params) {
     const hostHarness = detectHarnessFromPath() || detectAgentHarness() || ci.name || 'unknown';
     const ideVersion = detectIdeVersion();
     const dshVersion = detectDshVersion();
+    const wbVersion = detectWorkBuddyVersion();
     initTelemetry({
       harness: hostHarness,
       version: hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor'
         ? (ideVersion || ci.version || '0.0.0')
         : hostHarness === 'dsh'
           ? (dshVersion || ci.version || '0.0.0')
-          : (ci.version || '0.0.0'),
+          : hostHarness === 'workbuddy'
+            ? (wbVersion || ci.version || '0.0.0')
+            : (ci.version || '0.0.0'),
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',

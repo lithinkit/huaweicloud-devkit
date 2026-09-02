@@ -1503,6 +1503,83 @@ function ensureWorkbuddyMcpConfig() {
   return true;
 }
 
+// Resolve WorkBuddy's managed Python binary to run the hook tracker.
+// Falls back to a version-specific path if "current" symlink doesn't exist.
+function resolveWorkBuddyPython() {
+  const versionsDir = join(homedir(), '.workbuddy', 'binaries', 'python', 'versions');
+  const candidates = [
+    join(versionsDir, 'current', 'python.exe'),
+    join(versionsDir, '3.13.12', 'python.exe'),
+    join(versionsDir, '3.11.15', 'python.exe'),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p.replace(/\\/g, '/');
+  }
+  console.log('  \x1b[33m[WARN]\x1b[0m No WorkBuddy managed Python found; PostToolUse telemetry hook not installed.');
+  return null;
+}
+
+// Deploy hook-based telemetry (PostToolUse tracker) and plugin safety hooks
+// for WorkBuddy. Idempotent — safe to run on install and update.
+function deployWorkBuddyHooks() {
+  const pythonBin = resolveWorkBuddyPython();
+  if (!pythonBin) return;
+
+  // 1. Deploy telemetry-tracker.py → ~/.codebuddy/hooks/
+  const codebuddyHooksDir = join(homedir(), '.codebuddy', 'hooks');
+  const trackerSrc = join(PACKAGE_ROOT, 'integrations', 'workbuddy', 'hooks', 'telemetry-tracker.py');
+  if (existsSync(trackerSrc)) {
+    mkdirSync(codebuddyHooksDir, { recursive: true });
+    copyFileSync(trackerSrc, join(codebuddyHooksDir, 'telemetry-tracker.py'));
+    console.log(`  Hook tracker -> ${join(codebuddyHooksDir, 'telemetry-tracker.py')}`);
+  }
+
+  // 2. Deploy plugin hooks (hooks.json + huaweicloud-safety.py) → plugins/hooks/
+  const hooksSrcDir = join(PLUGIN_ROOT, 'hooks');
+  if (existsSync(hooksSrcDir)) {
+    const hooksDestDir = join(workbuddyPluginsDir(), 'hooks');
+    copyDir(hooksSrcDir, hooksDestDir);
+    console.log(`  Plugin hooks -> ${hooksDestDir}`);
+  }
+
+  // 3. Merge PostToolUse hook into ~/.workbuddy/settings.json
+  const settingsPath = join(homedir(), '.workbuddy', 'settings.json');
+  const trackerCmd = `${pythonBin} "${join(codebuddyHooksDir, 'telemetry-tracker.py').replace(/\\/g, '/')}"`;
+  const newEntry = {
+    matcher: '*',
+    hooks: [{ type: 'command', command: trackerCmd, timeout: 3 }],
+  };
+
+  let settings = {};
+  if (existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    } catch {
+      console.log(`  \x1b[33m[WARN]\x1b[0m Could not parse ${settingsPath}; hook config not merged.`);
+      settings = {};
+    }
+  }
+
+  settings.hooks = settings.hooks || {};
+  if (!settings.hooks.PostToolUse) {
+    settings.hooks.PostToolUse = [newEntry];
+  } else {
+    // Avoid duplicate: only add if our matcher isn't already present
+    const matchers = settings.hooks.PostToolUse.map((e) => e?.matcher || '');
+    if (!matchers.includes('*')) {
+      settings.hooks.PostToolUse.push(newEntry);
+    }
+  }
+
+  mkdirSync(join(homedir(), '.workbuddy'), { recursive: true });
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 4) + '\n');
+  console.log(`  PostToolUse hook -> ${settingsPath}`);
+
+  // 4. Ensure telemetry output directories exist
+  mkdirSync(join(workbuddyPluginsDir(), 'telemetry'), { recursive: true });
+  mkdirSync(join(homedir(), '.huaweicloud-devkit', 'telemetry'), { recursive: true });
+}
+
 async function installWorkBuddy() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
@@ -1519,6 +1596,9 @@ async function installWorkBuddy() {
 
   ensureWorkbuddyMcpConfig();
   installRuntimeDeps(pluginDest);
+
+  // Deploy hook-based telemetry and safety hooks
+  deployWorkBuddyHooks();
 }
 
 // Incremental update: overwrite copied files, prune stale ones, and only touch the config when necessary.
@@ -1539,6 +1619,8 @@ async function updateWorkBuddy() {
   mkdirSync(pluginDest, { recursive: true });
   writeFileSync(join(pluginDest, '.installed'), new Date().toISOString());
   installRuntimeDeps(pluginDest);
+
+  deployWorkBuddyHooks();
 }
 
 function uninstallWorkBuddy() {
@@ -1571,6 +1653,39 @@ function uninstallWorkBuddy() {
       console.log(`  MCP config cleaned: ${configPath}`);
     }
   }
+
+  // Clean up hook-based telemetry artifacts
+  const settingsPath = join(homedir(), '.workbuddy', 'settings.json');
+  if (existsSync(settingsPath)) {
+    let settings = {};
+    try {
+      settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    } catch {}
+    if (settings.hooks?.PostToolUse) {
+      const before = settings.hooks.PostToolUse.length;
+      settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
+        (e) => e?.matcher !== '*',
+      );
+      if (settings.hooks.PostToolUse.length === 0) delete settings.hooks.PostToolUse;
+      if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+      if (before !== settings.hooks.PostToolUse?.length) {
+        writeFileSync(settingsPath, JSON.stringify(settings, null, 4) + '\n');
+        console.log(`  PostToolUse hook removed from ${settingsPath}`);
+      }
+    }
+  }
+
+  const trackerPath = join(homedir(), '.codebuddy', 'hooks', 'telemetry-tracker.py');
+  if (existsSync(trackerPath)) {
+    rmSync(trackerPath);
+    console.log(`  Removed hook tracker: ${trackerPath}`);
+  }
+
+  const devkitTelemetryDir = join(homedir(), '.huaweicloud-devkit', 'telemetry');
+  if (existsSync(devkitTelemetryDir)) {
+    rmSync(devkitTelemetryDir, { recursive: true, force: true });
+    console.log(`  Removed telemetry cache: ${devkitTelemetryDir}`);
+  }
 }
 
 function workbuddyStatus() {
@@ -1602,6 +1717,18 @@ function workbuddyStatus() {
       console.log(`  MCP config: \x1b[31mInvalid\x1b[0m`);
     }
   }
+  const settingsPath = join(homedir(), '.workbuddy', 'settings.json');
+  let hookConfigured = false;
+  if (existsSync(settingsPath)) {
+    try {
+      const s = JSON.parse(readFileSync(settingsPath, 'utf8'));
+      hookConfigured = s.hooks?.PostToolUse?.some((e) => e?.matcher === '*') || false;
+    } catch {}
+  }
+  const hookTrackerInstalled = existsSync(join(homedir(), '.codebuddy', 'hooks', 'telemetry-tracker.py'));
+  console.log(
+    `  Telemetry Hook: ${hookConfigured && hookTrackerInstalled ? '\x1b[32mInstalled\x1b[0m' : '\x1b[31mNot installed\x1b[0m'}`,
+  );
 }
 
 function ensureAtomcodeMcpConfig() {
