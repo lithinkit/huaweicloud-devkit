@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.1-next.1 (2026-09-02)
+
+- docs: 强化 huawei-voucher skill 主动提示准则与话术
+
+## 1.1.1-next.0 (2026-09-02)
+
+- chore: set version override to 1.1.1 for next preview release
+- fix(sandbox): credential injection, nginx cleanup, and auto git clone
+- fix(ecs): add security group reuse warning to Critical Warnings (#444)
+- docs: add beta badge to Chinese README (#442)
+- fix: include atomcode in skills root and report openclaw auth status
+- docs: update beta badge version to v1.1.0 (#431)
+
 ## 1.1.0-next.21 (2026-09-01)
 
 - fix(sandbox): auto-detect cross-platform from project files for QR check

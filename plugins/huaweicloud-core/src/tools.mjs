@@ -1,8 +1,9 @@
-import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync, readdirSync, existsSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { homedir } from 'node:os';
-import { spawnSync } from 'node:child_process';
+import { homedir, tmpdir } from 'node:os';
+import { spawnSync, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 import { evaluateArtifacts, evaluateCommandRisk, evaluateDeployPlan } from './risk-rule-engine.mjs';
 import { classifyTextCommand, redactSecrets } from './safety-policy.mjs';
@@ -780,6 +781,85 @@ function toolInvokeValue(name, args) {
   return '1';
 }
 
+const execFilePromise = promisify(execFile);
+
+async function isGitAvailable() {
+  try {
+    await execFilePromise('git', ['--version'], { timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function gitCloneToLocal(repoUrl, branch, targetBasename) {
+  const tempRoot = join(tmpdir(), `hw-sandbox-git-${Date.now()}`);
+  const cloneDir = join(tempRoot, targetBasename);
+  mkdirSync(tempRoot, { recursive: true });
+  const args = ['clone', '--depth', '1'];
+  if (branch) args.push('-b', branch);
+  args.push(repoUrl, cloneDir);
+  await execFilePromise('git', args, { timeout: 120000 });
+  return { cloneDir, tempRoot };
+}
+
+async function transferGitRepo(args, devStageId, connectResult) {
+  const git = args.git;
+  if (!git?.repo_url || !git?.target_path) return;
+
+  const { repo_url, repo_branch, target_path } = git;
+
+  try {
+    const existsCheck = await execOneShot(
+      devStageId,
+      `test -d "${target_path}/.git" && echo "EXISTS" || echo "NOT_EXISTS"`,
+      'root',
+      10000,
+    );
+    if (String(existsCheck.stdout || '').includes('EXISTS')) {
+      connectResult._repoStatus = 'already_exists';
+      return;
+    }
+  } catch {
+    /* 检查失败继续 */
+  }
+
+  const hasGit = await isGitAvailable();
+  if (hasGit) {
+    let tempRoot = null;
+    try {
+      const targetName = basename(target_path);
+      const { cloneDir, tempRoot: root } = await gitCloneToLocal(repo_url, repo_branch, targetName);
+      tempRoot = root;
+      await uploadProjectWithSession(devStageId, cloneDir, dirname(target_path), 'root', 300000, {
+        extract: true,
+        exclude: ['.git', 'node_modules'],
+      });
+      connectResult._repoStatus = 'uploaded_from_local';
+      return;
+    } catch {
+      /* 本地方式失败，进入兜底 */
+    } finally {
+      if (tempRoot) {
+        try {
+          rmSync(tempRoot, { recursive: true, force: true });
+        } catch {
+          /* 清理失败忽略 */
+        }
+      }
+    }
+  }
+
+  const branchFlag = repo_branch ? `-b ${repo_branch}` : '';
+  await execOneShot(
+    devStageId,
+    `mkdir -p $(dirname "${target_path}") && git clone --depth 1 ${branchFlag} "${repo_url}" "${target_path}"`,
+    'root',
+    120000,
+  );
+  connectResult._repoStatus = 'cloned_in_sandbox';
+}
+
 export async function callTool(name, args = {}) {
   const toolValue = toolInvokeValue(name, args);
   trackToolInvoke(name, toolValue);
@@ -999,6 +1079,7 @@ export async function callTool(name, args = {}) {
         try {
           await execOneShot(devStageId, 'devbridge delete-all 2>/dev/null || true', 'root', 15000);
         } catch {}
+        await transferGitRepo(args, devStageId, connectResult);
       }
       return connectResult;
     }
@@ -1024,6 +1105,7 @@ export async function callTool(name, args = {}) {
             'root',
             15000,
           );
+          await execWithSession(sandboxWsIdCred, `source ${credsFile} && echo "CREDS_SOURCED"`, 'root', 15000);
         } catch {}
       }
       return credResult;
