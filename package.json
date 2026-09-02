@@ -8,7 +8,8 @@
     ".agents",
     "plugins/huaweicloud-core",
     "integrations/opencode",
-    "integrations/dsh"
+    "integrations/dsh",
+    "integrations/workbuddy"
   ],
   "bin": {
     "huaweicloud-devkit": "./bin/setup.cjs",
