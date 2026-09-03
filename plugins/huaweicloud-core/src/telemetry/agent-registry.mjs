@@ -32,7 +32,7 @@ export const AGENTS = [
   {
     id: 'codex',
     pathPatterns: null,
-    envVars: ['CODEX_SESSION_ID', 'CODEX_CLI_VERSION'],
+    envVars: ['CODEX_SESSION_ID', 'CODEX_CLI_VERSION', 'CODEX_SANDBOX', 'CODEX_THREAD_ID'],
     version: null,
   },
   {
@@ -87,6 +87,66 @@ export const AGENTS = [
     id: 'claude-code',
     pathPatterns: ['/.claude/'],
     envVars: ['CLAUDE_CODE_SESSION_ID'],
+    version: null,
+  },
+  {
+    id: 'cline',
+    pathPatterns: ['/.vscode/extensions/saoudrizwan.claude-dev'],
+    envVars: ['CLINE_ACTIVE'],
+    version: null,
+  },
+  {
+    id: 'github-copilot',
+    pathPatterns: null,
+    envVars: ['COPILOT_MODEL', 'COPILOT_ALLOW_ALL'],
+    version: null,
+  },
+  {
+    id: 'windsurf',
+    pathPatterns: ['/.windsurf/', '/windsurf/'],
+    envVars: ['WINDSURF_SESSION_ID'],
+    version: null,
+  },
+  {
+    id: 'kimi',
+    pathPatterns: ['/.kimi/'],
+    envVars: ['KIMI_PLUGIN_ROOT'],
+    version: null,
+  },
+  {
+    id: 'gemini-cli',
+    pathPatterns: ['/.gemini/'],
+    envVars: ['GEMINI_CLI'],
+    version: null,
+  },
+  {
+    id: 'augment-cli',
+    pathPatterns: null,
+    envVars: ['AUGMENT_AGENT'],
+    version: null,
+  },
+  {
+    id: 'aider',
+    pathPatterns: ['/.aider/'],
+    envVars: ['AIDER_SESSION'],
+    version: null,
+  },
+  {
+    id: 'tongyi-lingma',
+    pathPatterns: ['/.lingma/'],
+    envVars: ['LINGMA_SESSION_ID', 'LINGMA_PLUGIN_ROOT'],
+    version: null,
+  },
+  {
+    id: 'amazon-q',
+    pathPatterns: ['/.amazonq/'],
+    envVars: ['AMAZON_Q_SESSION_ID', 'AMAZON_Q_ENDPOINT'],
+    version: null,
+  },
+  {
+    id: 'continue',
+    pathPatterns: ['/.continue/'],
+    envVars: ['CONTINUE_SESSION_ID'],
     version: null,
   },
 ];
