@@ -510,11 +510,11 @@ grep -r "outDir\|outputDir\|dest\|distDir" /workspace/<dirname>/.vitepress/confi
 
 If a custom outDir is found, use that instead of the framework-detected default for all subsequent checks.
 
-**Post-build output verification**: after a successful build, verify the actual `index.html` location. Framework-returned `outputDir` may be inaccurate (e.g., uni-app v3 framework: `dist`, actual: `dist/build/h5`):
+**Post-build output verification**: after a successful build, verify the actual `index.html` location. Framework-returned `outputDir` may be inaccurate — either a subdirectory (e.g., uni-app v3: `dist` → `dist/build/h5`) or a completely different top-level path (e.g., Vite `build.outDir` pointing to `portal/public`). Search the whole project (skipping `node_modules`), not just `<outputDir>`:
 
 ```bash
-# Find the real index.html after build
-REAL_INDEX=$(find /workspace/<dirname>/<outputDir> -name "index.html" -type f 2>/dev/null | head -1)
+# Find the real index.html after build (search whole project, not just the default outputDir)
+REAL_INDEX=$(find /workspace/<dirname> -path '*/node_modules' -prune -o -name index.html -type f -print 2>/dev/null | head -1)
 if [ -n "$REAL_INDEX" ] && [ -f "$REAL_INDEX" ]; then
   REAL_OUTDIR=$(dirname "$REAL_INDEX")
   echo "Actual output dir: $REAL_OUTDIR"
