@@ -316,6 +316,7 @@ export function initTelemetry({ harness, version }) {
   installId = generateOrRecoverInstallId();
   agentHarness = harness || 'unknown';
   agentVersion = version || '0.0.0';
+
   loadUserHash();
 
   if (!isTelemetryEnabled()) return;
