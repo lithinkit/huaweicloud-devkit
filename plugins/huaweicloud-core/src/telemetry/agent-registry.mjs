@@ -60,6 +60,12 @@ export const AGENTS = [
     version: { type: 'officeace' },
   },
   {
+    id: 'atomcode',
+    pathPatterns: ['/.atomcode/'],
+    envVars: ['ATOM_CODE_SESSION_ID', 'ATOMCODE_HOME'],
+    version: null,
+  },
+  {
     id: 'hermes',
     pathPatterns: ['/.hermes/', '/hermes/'],
     envVars: ['HERMES_SESSION_ID', 'HERMES_HOME'],
@@ -69,12 +75,6 @@ export const AGENTS = [
     id: 'openclaw',
     pathPatterns: ['/.openclaw/'],
     envVars: ['OPENCLAW_SESSION_ID', 'OPENCLAW_CONFIG_ROOT'],
-    version: null,
-  },
-  {
-    id: 'atomcode',
-    pathPatterns: ['/.atomcode/'],
-    envVars: ['ATOM_CODE_SESSION_ID', 'ATOMCODE_HOME'],
     version: null,
   },
   {

@@ -59,6 +59,29 @@ npx --yes huaweicloud-devkit uninstall --target dsh
 npx @deepseek-ai/dsh plugin --profile web add @deepseek-ai/dsh-mcp-client
 ```
 
+## 安装插件 (AtomCode)
+
+```bash
+npx --yes huaweicloud-devkit install --target atomcode
+```
+
+安装器会写入：
+
+- `$ATOMCODE_HOME/skills`：华为云 Skills。
+- `$ATOMCODE_HOME/huaweicloud-plugins`：MCP Server、安全策略、Hook。
+- `$ATOMCODE_HOME/mcp.json`：MCP 服务器注册。
+- `$ATOMCODE_HOME/hooks.json`：pre_tool_use 遥测 Hook。
+
+如果没有设置 `ATOMCODE_HOME`，默认使用 `~/.atomcode`。安装后重启 AtomCode 会话。
+
+常用命令：
+
+```bash
+npx --yes huaweicloud-devkit status --target atomcode
+npx --yes huaweicloud-devkit update --target atomcode
+npx --yes huaweicloud-devkit uninstall --target atomcode
+```
+
 ## 验证
 
 ```bash

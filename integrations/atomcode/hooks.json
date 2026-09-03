@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "hw-telemetry": {
+      "event": "pre_tool_use",
+      "command": "<node_path> <plugin_dir>/hooks/huaweicloud-telemetry.js",
+      "timeout_ms": 2000
+    }
+  }
+}

@@ -1587,6 +1587,66 @@ function deployWorkBuddyHooks() {
   mkdirSync(join(homedir(), '.huaweicloud-devkit', 'telemetry'), { recursive: true });
 }
 
+// ── AtomCode hooks deployment ────────────────────────────────
+
+function deployAtomcodeHooks() {
+  const hooksDestDir = join(atomcodePluginsDir(), 'hooks');
+  const hooksSrc = join(PACKAGE_ROOT, 'integrations', 'atomcode', 'hooks', 'huaweicloud-telemetry.js');
+
+  // 1. Copy hook script
+  if (existsSync(hooksSrc)) {
+    mkdirSync(hooksDestDir, { recursive: true });
+    copyFileSync(hooksSrc, join(hooksDestDir, 'huaweicloud-telemetry.js'));
+    console.log(`  Hook -> ${join(hooksDestDir, 'huaweicloud-telemetry.js')}`);
+  }
+
+  // 2. Merge pre_tool_use hook into ~/.atomcode/hooks.json
+  const hooksConfigPath = join(atomcodeHome(), 'hooks.json');
+  const nodeBin = process.execPath;
+  const hookCmd = `${nodeBin} ${join(atomcodePluginsDir(), 'hooks', 'huaweicloud-telemetry.js').replace(/\\/g, '/')}`;
+
+  let hooksConfig = {};
+  if (existsSync(hooksConfigPath)) {
+    try {
+      hooksConfig = JSON.parse(readFileSync(hooksConfigPath, 'utf8'));
+    } catch {
+      console.log(`  \x1b[33m[WARN]\x1b[0m Could not parse ${hooksConfigPath}; hook config not merged.`);
+      hooksConfig = {};
+    }
+  }
+
+  hooksConfig.hooks = hooksConfig.hooks || {};
+  hooksConfig.hooks['hw-telemetry'] = {
+    event: 'pre_tool_use',
+    command: hookCmd,
+    timeout_ms: 2000,
+  };
+
+  mkdirSync(atomcodeHome(), { recursive: true });
+  writeFileSync(hooksConfigPath, JSON.stringify(hooksConfig, null, 2) + '\n');
+  console.log(`  Hook config -> ${hooksConfigPath}`);
+}
+
+function removeAtomcodeHooks() {
+  // Remove hook script
+  removeIfExists(join(atomcodePluginsDir(), 'hooks', 'huaweicloud-telemetry.js'));
+
+  // Remove hw-telemetry entry from hooks.json
+  const hooksConfigPath = join(atomcodeHome(), 'hooks.json');
+  if (existsSync(hooksConfigPath)) {
+    let hooksConfig = {};
+    try {
+      hooksConfig = JSON.parse(readFileSync(hooksConfigPath, 'utf8'));
+    } catch { return; }
+    if (hooksConfig.hooks?.['hw-telemetry']) {
+      delete hooksConfig.hooks['hw-telemetry'];
+      if (Object.keys(hooksConfig.hooks).length === 0) delete hooksConfig.hooks;
+      writeFileSync(hooksConfigPath, JSON.stringify(hooksConfig, null, 2) + '\n');
+      console.log(`  Hook config cleaned: ${hooksConfigPath}`);
+    }
+  }
+}
+
 async function installWorkBuddy() {
   const skillsSrc = join(PLUGIN_ROOT, 'skills');
   const srcDir = join(PLUGIN_ROOT, 'src');
@@ -1739,7 +1799,7 @@ function workbuddyStatus() {
 function ensureAtomcodeMcpConfig() {
   const configPath = atomcodeMcpConfigFile();
   const mcpPath = join(atomcodePluginsDir(), 'src', 'mcp-server.mjs').replace(/\\/g, '/');
-  const env = { HUAWEICLOUD_AGENT_TOOLKIT_MODE: 'local' };
+  const env = { HUAWEICLOUD_AGENT_TOOLKIT_MODE: 'local', AGENT_HARNESS: 'atomcode' };
   const hcloudBin = findHcloudBin();
   if (hcloudBin) env.HCLOUD_BIN = hcloudBin.replace(/\\/g, '/');
   let config = {};
@@ -1792,6 +1852,7 @@ async function installAtomCode() {
   console.log(`  Safety Policy -> ${join(pluginDest, 'safety')}`);
 
   ensureAtomcodeMcpConfig();
+  deployAtomcodeHooks();
   installRuntimeDeps(pluginDest);
 }
 
@@ -1810,6 +1871,7 @@ async function updateAtomCode() {
   copyDir(safetyDir, join(pluginDest, 'safety'));
   console.log(`  Safety Policy updated -> ${join(pluginDest, 'safety')}`);
   ensureAtomcodeMcpConfig();
+  deployAtomcodeHooks();
   mkdirSync(pluginDest, { recursive: true });
   writeFileSync(join(pluginDest, '.installed'), new Date().toISOString());
   installRuntimeDeps(pluginDest);
@@ -1827,6 +1889,8 @@ function uninstallAtomCode() {
     }
     if (removed > 0) console.log(`  Removed ${removed} skills`);
   }
+
+  removeAtomcodeHooks();
 
   if (removeIfExists(atomcodePluginsDir())) {
     console.log('  Removed MCP server and safety policy');
