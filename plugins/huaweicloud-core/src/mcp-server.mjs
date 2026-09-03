@@ -162,12 +162,20 @@ let useContentLengthFraming = true;
 // the only handle. On Windows, Hermes may close the stdin pipe after the
 // initial handshake, causing the process to exit silently (exit 0).
 //
-// When stdin closes, start a keepalive timer. When stdout also closes (normal
-// shutdown signal from OfficeAce or other agents), clear the timer and exit.
+// For Hermes on Windows: start a keepalive timer on stdin close, and only exit
+// when stdout also closes.
+// For all other agents (OfficeAce, WorkBuddy, etc.): stdin close is the
+// shutdown signal — exit cleanly so the host does not see CLOSE_TIMEOUT.
+const harness = detectHarnessFromPath();
+const NEEDS_KEEPALIVE = harness === 'hermes' && platform() === 'win32';
 let keepAlive = null;
 function onStdinClose() {
   if (keepAlive) return;
-  keepAlive = setInterval(() => {}, 60000);
+  if (NEEDS_KEEPALIVE) {
+    keepAlive = setInterval(() => {}, 60000);
+  } else {
+    process.exit(0);
+  }
 }
 function onStdoutClose() {
   if (keepAlive) {
