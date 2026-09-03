@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1-next.8 (2026-09-03)
+
+- feat: 安装提示补充由 AI 助手转达代金券的指令
+
+## 1.1.1-next.7 (2026-09-03)
+
+- feat: 安装完成提示首次使用可领取华为云代金券
+- docs(sandbox): find real build output dir across the whole project (#247)
+
 ## 1.1.1-next.6 (2026-09-02)
 
 - Revert "fix(ecs): change preflight SG check from hard-deny to require_user_confirmation (#468)" (#470)
