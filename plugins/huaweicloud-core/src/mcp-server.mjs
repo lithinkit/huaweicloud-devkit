@@ -15,6 +15,7 @@ function detectHarnessFromPath() {
   if (selfPath.includes('/.dsh/')) return 'dsh';
   if (selfPath.includes('/.hermes/')) return 'hermes';
   if (selfPath.includes('/hermes/')) return 'hermes';
+  if (selfPath.includes('/.office-claw/')) return 'officeace';
   if (selfPath.includes('/.officeace/')) return 'officeace';
   return null;
 }
@@ -97,6 +98,20 @@ function detectWorkBuddyVersion() {
     if (r2) return r2;
   }
 
+  return null;
+}
+
+function detectOfficeAceVersion() {
+  if (process.env.OFFICEACE_VERSION) return process.env.OFFICEACE_VERSION;
+  if (process.env.LOCALAPPDATA) {
+    const p = join(process.env.LOCALAPPDATA, 'Programs', 'OfficeAce', '.office-claw-release.json');
+    try {
+      if (existsSync(p)) {
+        const v = JSON.parse(readFileSync(p, 'utf8')).version;
+        if (v) return `V${v}`;
+      }
+    } catch {}
+  }
   return null;
 }
 
@@ -270,6 +285,7 @@ async function dispatch(method, params) {
     const dshVersion = detectDshVersion();
     const wbVersion = detectWorkBuddyVersion();
     const hermesVersion = detectHermesVersion();
+    const officeaceVersion = detectOfficeAceVersion();
     initTelemetry({
       harness: hostHarness,
       version: hostHarness === 'codearts' || hostHarness === 'codex-desktop' || hostHarness === 'cursor'
@@ -280,7 +296,9 @@ async function dispatch(method, params) {
             ? (wbVersion || ci.version || '0.0.0')
             : hostHarness === 'hermes'
               ? (hermesVersion || ci.version || '0.0.0')
-              : (ci.version || '0.0.0'),
+              : hostHarness === 'officeace'
+                ? (officeaceVersion || ci.version || '0.0.0')
+                : (ci.version || '0.0.0'),
     });
     return {
       protocolVersion: params.protocolVersion || '2024-11-05',
