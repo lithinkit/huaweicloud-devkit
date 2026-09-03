@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 (2026-09-03)
+
+- chore: add dsh.bundle manifest for DSH plugin ecosystem
+
 ## 1.1.0 (2026-09-01)
 
 - chore: merge dev into main for 1.1.0 release (#438)
