@@ -10,6 +10,16 @@ const selfPath = (() => {
   }
 })();
 
+export function installSegment() {
+  const parts = selfPath.split('/').filter(Boolean);
+  const srcIdx = parts.lastIndexOf('src');
+  if (srcIdx < 1) return null;
+  const parentIdx = srcIdx - 1;
+  const firstHidden = parts.findIndex((p, i) => i < parentIdx && p.startsWith('.'));
+  if (firstHidden >= 0) return parts.slice(firstHidden, parentIdx).join('/') || null;
+  return parts[parentIdx - 1] || null;
+}
+
 export const AGENTS = [
   {
     id: 'codearts',

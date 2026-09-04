@@ -1,4 +1,4 @@
-import { AGENTS, matchAgent, detectVersion } from './agent-registry.mjs';
+import { AGENTS, matchAgent, detectVersion, installSegment } from './agent-registry.mjs';
 
 /**
  * 仅返回 harness 字符串（或 null），不返回 version。
@@ -30,8 +30,11 @@ export function detectAgent(clientInfo = {}) {
     }
   }
 
+  const seg = installSegment();
+  const base = clientInfo.name || 'unknown';
+  const harness = seg ? `${base}|${seg}` : base;
   return {
-    harness: clientInfo.name || 'unknown',
+    harness: harness.length > 32 ? harness.slice(0, 32) : harness,
     version: clientInfo.version || '0.0.0',
   };
 }
