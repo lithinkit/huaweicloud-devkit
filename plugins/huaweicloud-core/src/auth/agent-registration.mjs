@@ -186,9 +186,18 @@ function atomcodeRegistered() {
   return Boolean(cfg?.mcpServers?.['huaweicloud-devkit']);
 }
 
+function openclawMcpConfigured(cfg) {
+  if (!cfg) return false;
+  if (cfg.mcpServers?.['huaweicloud-devkit']) return true;
+  if (cfg.mcp?.servers?.['huaweicloud-devkit']) return true;
+  return false;
+}
+
 function openclawRegistered() {
-  const cfg = readJsonSafe(join(baseHome(), '.agents', 'huaweicloud-plugins', '.mcp.json'));
-  return Boolean(cfg?.mcpServers?.['huaweicloud-devkit']);
+  const pluginCfg = readJsonSafe(join(baseHome(), '.agents', 'huaweicloud-plugins', '.mcp.json'));
+  if (openclawMcpConfigured(pluginCfg)) return true;
+  const nativeCfg = readJsonSafe(join(baseHome(), '.openclaw', 'openclaw.json'));
+  return openclawMcpConfigured(nativeCfg);
 }
 
 function hermesHome() {

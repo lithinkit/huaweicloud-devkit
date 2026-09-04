@@ -73,7 +73,7 @@ export const AGENTS = [
   },
   {
     id: 'openclaw',
-    pathPatterns: ['/.openclaw/'],
+    pathPatterns: ['/.openclaw/', '/.agents/huaweicloud-plugins/'],
     envVars: ['OPENCLAW_SESSION_ID', 'OPENCLAW_CONFIG_ROOT'],
     version: null,
   },
