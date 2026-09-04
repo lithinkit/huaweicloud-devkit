@@ -10,7 +10,8 @@
     "integrations/hermes",
     "integrations/opencode",
     "integrations/dsh",
-    "integrations/workbuddy"
+    "integrations/workbuddy",
+    "integrations/atomcode"
   ],
   "bin": {
     "huaweicloud-devkit": "./bin/setup.cjs",
@@ -61,6 +62,7 @@
     "officeace",
     "office-claw",
     "workbuddy",
+    "atomcode",
     "dsh",
     "deepseek-harness",
     "mcp",
