@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1-next.9 (2026-09-04)
+
+- feat: add DSH post-install guidance for KooCLI and credentials setup
+- fix(dsh): maintain existing state after legacy block cleanup
+- fix: move createRequire after all imports, remove shebang, format
+- refactor: remove better-sqlite3, auto-setup DSH via bundle patch
+
 ## 1.1.1-next.8 (2026-09-03)
 
 - feat: 安装提示补充由 AI 助手转达代金券的指令
