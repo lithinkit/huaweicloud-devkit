@@ -14,7 +14,6 @@ import { homedir, platform } from 'node:os';
 import { createInterface } from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import Database from 'better-sqlite3';
 
 import { getAuthStatus, syncAuth } from './auth/service.mjs';
 import { SUPPORTED_AGENT_TARGETS } from './auth/agent-registration.mjs';
@@ -31,6 +30,9 @@ import {
   clearProxyConfig,
   getProxySettings,
 } from './proxy/proxy-config.mjs';
+
+import { createRequire } from 'node:module';
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(__dirname, '..');
@@ -210,7 +212,7 @@ function officeaceSqlitePath() {
 }
 
 function openOfficeaceDb() {
-  return new Database(officeaceSqlitePath());
+  return new DatabaseSync(officeaceSqlitePath());
 }
 
 function officeaceGetOwnerUserId() {
@@ -244,14 +246,14 @@ function ensureOfficeaceMcpInSqlite() {
     db = openOfficeaceDb();
 
     const existing = db
-      .prepare("SELECT id, command, args_json FROM mcp_connectors WHERE name = 'huaweicloud-devkit'")
+      .prepare("SELECT id, command, args_json, env_json FROM mcp_connectors WHERE name = 'huaweicloud-devkit'")
       .get();
 
     const argsJson = JSON.stringify([mcpPath]);
     const envJson = JSON.stringify(env);
 
     if (existing) {
-      if (existing.command === 'node' && existing.args_json === argsJson) {
+      if (existing.command === 'node' && existing.args_json === argsJson && existing.env_json === envJson) {
         console.log(`  MCP config unchanged: ${dbPath}`);
         db.close();
         return true;
@@ -1997,8 +1999,24 @@ function dshPatchHasOnlyCommentsOrEmptyList(content) {
 
 function ensureDshMcpPatch() {
   const patchFile = dshPatchFile();
-  const existing = existsSync(patchFile) ? readFileSync(patchFile, 'utf8') : '';
+  let existing = existsSync(patchFile) ? readFileSync(patchFile, 'utf8') : '';
+
+  // Clean up any legacy managed block from pre-bundle versions.
   const cleaned = removeManagedDshPatchBlock(existing);
+  if (cleaned !== existing) {
+    writeFileSync(patchFile, cleaned);
+    console.log(`  DSH patch legacy block cleaned: ${patchFile}`);
+    existing = cleaned;
+  }
+
+  // If the bundled cordis.patch.yml already provides the MCP config, skip
+  // writing a managed block to avoid duplicate entries.
+  if (cleaned.includes('@deepseek-ai/dsh-mcp-client') && cleaned.includes('serverName: huaweicloud')) {
+    console.log(`  DSH patch already configured via bundle: ${patchFile}`);
+    return false;
+  }
+
+  // Fallback for standalone usage: write a managed block when no bundle.
   const block = dshPatchBlock();
   let next;
   if (dshPatchHasOnlyCommentsOrEmptyList(cleaned)) {

@@ -34,10 +34,9 @@
     "lint": "npm run lint:md && npm run lint:js",
     "validate": "node ./scripts/validate-package.mjs",
     "pack:verify": "node ./scripts/pack-verify.mjs",
-    "postinstall": "node -e \"console.log('\\nHuaweiCloud DevKit installed. Run: npx huaweicloud-devkit install\\n')\""
+    "postinstall": "node ./bin/dsh-postinstall.cjs"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "undici": "^8.10.0"
   },
   "devDependencies": {

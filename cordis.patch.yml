@@ -1,3 +1,15 @@
 - insert:
     - id: huaweicloud-devkit
       name: huaweicloud-devkit
+    - id: mcp-huaweicloud
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: huaweicloud
+        transport: stdio
+        command: node
+        args:
+          - './node_modules/huaweicloud-devkit/plugins/huaweicloud-core/src/mcp-server.mjs'
+        env:
+          HUAWEICLOUD_AGENT_TOOLKIT_MODE: local
+          HDKITSERVICE_ENDPOINT: ''
+        failOnStartupError: false
